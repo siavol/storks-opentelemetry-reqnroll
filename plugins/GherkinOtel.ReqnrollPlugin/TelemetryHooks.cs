@@ -14,6 +14,34 @@ public sealed class TelemetryHooks(
     [BeforeScenario(Order = int.MinValue)]
     public void OpenWindow() => _scenarioStart = DateTimeOffset.UtcNow;
 
+    private DateTimeOffset _stepStart;
+
+    [BeforeStep(Order = int.MinValue)]
+    public void OpenStepWindow() => _stepStart = DateTimeOffset.UtcNow;
+
+    [AfterStep(Order = int.MaxValue)]
+    public async Task AttachStepSlice()
+    {
+        try
+        {
+            var stepWindow = new ObservationWindow(_stepStart, DateTimeOffset.UtcNow);
+            await Task.Delay(options.SettlePause);
+
+            var scenario = Attribution.Attribute(store.Snapshot(), new ObservationWindow(_scenarioStart, DateTimeOffset.UtcNow)).Scenario;
+            var text = TelemetryRenderer.Render(scenario.Slice(stepWindow));
+
+            var dir = Path.Combine(Path.GetTempPath(), "gherkin-otel", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var file = Path.Combine(dir, "step-telemetry.txt");
+            await File.WriteAllTextAsync(file, text);
+            output.AddAttachment(file);
+        }
+        catch (Exception ex)
+        {
+            output.WriteLine($"[GherkinOtel] failed to attach step telemetry: {ex}");
+        }
+    }
+
     [AfterScenario(Order = int.MaxValue)]
     public async Task AttachScenarioTelemetry()
     {
