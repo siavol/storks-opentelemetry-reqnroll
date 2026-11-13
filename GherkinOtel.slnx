@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/app/">
+    <Project Path="app/AppHost/AppHost.csproj" />
+    <Project Path="app/Orders.Api/Orders.Api.csproj" />
+    <Project Path="app/Pricing.Api/Pricing.Api.csproj" />
+    <Project Path="app/ServiceDefaults/ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/App.Sut.Tests/App.Sut.Tests.csproj" />
+  </Folder>
+</Solution>
