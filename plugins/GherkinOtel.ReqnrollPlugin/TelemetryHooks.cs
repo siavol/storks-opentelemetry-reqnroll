@@ -7,7 +7,9 @@ namespace GherkinOtel.ReqnrollPlugin;
 public sealed class TelemetryHooks(
     IReqnrollOutputHelper output,
     TelemetryStore store,
-    PluginOptions options)
+    PluginOptions options,
+    RunWindows runWindows,
+    PluginDiagnostics diagnostics)
 {
     private DateTimeOffset _scenarioStart;
 
@@ -48,6 +50,7 @@ public sealed class TelemetryHooks(
         try
         {
             var window = new ObservationWindow(_scenarioStart, DateTimeOffset.UtcNow);
+            runWindows.Add(window); // run-level remainder = what is outside every recorded window
             await Task.Delay(options.SettlePause);
 
             var scenario = Attribution.Attribute(store.Snapshot(), store.SnapshotSpans(), window).Scenario;
@@ -63,8 +66,13 @@ public sealed class TelemetryHooks(
         {
             output.WriteLine($"[GherkinOtel] failed to attach scenario telemetry: {ex}");
         }
+        finally
+        {
+            try
+            {
+                foreach (var message in diagnostics.Drain()) output.WriteLine($"[GherkinOtel] {message}");
+            }
+            catch { /* reporting problems must never change the scenario result */ }
+        }
     }
-
-    [AfterTestRun(Order = int.MaxValue)]
-    public static async Task StopReceiver(OtlpReceiver receiver) => await receiver.DisposeAsync();
 }

@@ -19,9 +19,21 @@ namespace GherkinOtel.ReqnrollPlugin;
 public sealed class OtlpReceiver : IAsyncDisposable
 {
     private readonly TelemetryStore _store;
+    private readonly Action<string>? _onError;
     private WebApplication? _app;
 
-    public OtlpReceiver(TelemetryStore store) => _store = store;
+    /// <param name="onError">Receives a description of every rejected or failed request (e.g. to write it to test output).</param>
+    public OtlpReceiver(TelemetryStore store, Action<string>? onError = null)
+    {
+        _store = store;
+        _onError = onError;
+    }
+
+    private void Report(string message)
+    {
+        try { _onError?.Invoke(message); }
+        catch { /* the error sink must never break the receiver */ }
+    }
 
     public Uri Endpoint { get; private set; } = null!;
 
@@ -42,9 +54,15 @@ public sealed class OtlpReceiver : IAsyncDisposable
                 _store.AddLogs(OtlpMapper.MapLogs(export));
                 return Results.Bytes(new ExportLogsServiceResponse().ToByteArray(), "application/x-protobuf");
             }
-            catch (InvalidProtocolBufferException)
+            catch (InvalidProtocolBufferException ex)
             {
+                Report($"rejected invalid OTLP request to /v1/logs: {ex.Message}");
                 return Results.BadRequest();
+            }
+            catch (Exception ex)
+            {
+                Report($"failed to process OTLP request to /v1/logs: {ex}");
+                return Results.StatusCode(500);
             }
         });
         app.MapPost("/v1/traces", async (HttpRequest request) =>
