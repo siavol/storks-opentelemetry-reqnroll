@@ -1,4 +1,5 @@
 using OpenTelemetry.Proto.Collector.Logs.V1;
+using OpenTelemetry.Proto.Collector.Trace.V1;
 using OpenTelemetry.Proto.Common.V1;
 using OpenTelemetry.Proto.Logs.V1;
 
@@ -28,6 +29,42 @@ internal static class OtlpMapper
             }
         }
     }
+
+    public static IEnumerable<TelemetrySpan> MapSpans(ExportTraceServiceRequest request)
+    {
+        foreach (var resourceSpans in request.ResourceSpans)
+        {
+            var service = resourceSpans.Resource?.Attributes
+                .FirstOrDefault(a => a.Key == "service.name")?.Value?.StringValue ?? "unknown";
+            foreach (var scope in resourceSpans.ScopeSpans)
+            foreach (var span in scope.Spans)
+            {
+                yield return new TelemetrySpan(
+                    Hex(span.TraceId)!,
+                    Hex(span.SpanId)!,
+                    Hex(span.ParentSpanId),
+                    span.Name,
+                    service,
+                    (SpanKind)(int)span.Kind,
+                    FromNanos(span.StartTimeUnixNano),
+                    span.EndTimeUnixNano == 0 ? null : FromNanos(span.EndTimeUnixNano),
+                    span.Status?.Code switch
+                    {
+                        OpenTelemetry.Proto.Trace.V1.Status.Types.StatusCode.Ok => SpanStatus.Ok,
+                        OpenTelemetry.Proto.Trace.V1.Status.Types.StatusCode.Error => SpanStatus.Error,
+                        _ => SpanStatus.Unset,
+                    },
+                    span.Attributes
+                        .GroupBy(a => a.Key)
+                        .ToDictionary(g => g.Key, g => Format(g.Last().Value)));
+            }
+        }
+    }
+
+    private static DateTimeOffset FromNanos(ulong nanos) => DateTimeOffset.UnixEpoch.AddTicks((long)(nanos / 100));
+
+    private static string? Hex(Google.Protobuf.ByteString bytes) =>
+        bytes.IsEmpty ? null : Convert.ToHexStringLower(bytes.ToByteArray());
 
     private static LogSeverity MapSeverity(SeverityNumber n) => (int)n switch
     {

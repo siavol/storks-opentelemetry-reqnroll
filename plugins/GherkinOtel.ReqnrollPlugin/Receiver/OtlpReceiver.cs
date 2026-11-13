@@ -8,12 +8,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Proto.Collector.Logs.V1;
+using OpenTelemetry.Proto.Collector.Trace.V1;
 
 namespace GherkinOtel.ReqnrollPlugin;
 
 /// <summary>
 /// In-process OTLP/HTTP protobuf receiver (Telemetry Source). Listens on a dynamic loopback port.
-/// Currently accepts logs at POST /v1/logs; other signals are acknowledged and dropped.
+/// Accepts logs at POST /v1/logs and traces at POST /v1/traces; other signals are acknowledged and dropped.
 /// </summary>
 public sealed class OtlpReceiver : IAsyncDisposable
 {
@@ -46,7 +47,21 @@ public sealed class OtlpReceiver : IAsyncDisposable
                 return Results.BadRequest();
             }
         });
-        app.MapPost("/v1/traces", () => Results.Bytes([], "application/x-protobuf"));
+        app.MapPost("/v1/traces", async (HttpRequest request) =>
+        {
+            try
+            {
+                using var ms = new MemoryStream();
+                await request.Body.CopyToAsync(ms);
+                var export = ExportTraceServiceRequest.Parser.ParseFrom(ms.ToArray());
+                _store.AddSpans(OtlpMapper.MapSpans(export));
+                return Results.Bytes(new ExportTraceServiceResponse().ToByteArray(), "application/x-protobuf");
+            }
+            catch (InvalidProtocolBufferException)
+            {
+                return Results.BadRequest();
+            }
+        });
         app.MapPost("/v1/metrics", () => Results.Bytes([], "application/x-protobuf"));
 
         await app.StartAsync();

@@ -19,6 +19,13 @@ public readonly record struct ObservationWindow(DateTimeOffset Start, DateTimeOf
 }
 
 /// <summary>Scenario Telemetry: everything that started inside the window, chronological.</summary>
-public sealed record ScenarioTelemetry(ObservationWindow Window, IReadOnlyList<TelemetryLog> Logs);
+public sealed record ScenarioTelemetry(ObservationWindow Window, IReadOnlyList<TelemetryLog> Logs)
+{
+    /// <summary>Spans that started in the window, chronological.</summary>
+    public IReadOnlyList<TelemetrySpan> Spans { get; init; } = [];
+}
 
-public sealed record AttributionResult(ScenarioTelemetry Scenario, IReadOnlyList<TelemetryLog> Remainder);
+public sealed record AttributionResult(ScenarioTelemetry Scenario, IReadOnlyList<TelemetryLog> Remainder)
+{
+    public IReadOnlyList<TelemetrySpan> RemainderSpans { get; init; } = [];
+}

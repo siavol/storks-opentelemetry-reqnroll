@@ -22,7 +22,7 @@ public sealed class TelemetryHooks(
             var window = new ObservationWindow(_scenarioStart, DateTimeOffset.UtcNow);
             await Task.Delay(options.SettlePause);
 
-            var scenario = Attribution.Attribute(store.Snapshot(), window).Scenario;
+            var scenario = Attribution.Attribute(store.Snapshot(), store.SnapshotSpans(), window).Scenario;
             var text = TelemetryRenderer.Render(scenario);
 
             var dir = Path.Combine(Path.GetTempPath(), "gherkin-otel", Guid.NewGuid().ToString("N"));
