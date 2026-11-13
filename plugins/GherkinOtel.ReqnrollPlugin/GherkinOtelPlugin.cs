@@ -22,13 +22,16 @@ public sealed class GherkinOtelPlugin : IRuntimePlugin
         runtimePluginEvents.CustomizeGlobalDependencies += (_, args) =>
         {
             var store = new TelemetryStore();
-            var receiver = new OtlpReceiver(store);
+            var diagnostics = new PluginDiagnostics();
+            var receiver = new OtlpReceiver(store, diagnostics.Report);
             // Started here, i.e. before any hook can run.
             receiver.StartAsync().GetAwaiter().GetResult();
 
             var container = args.ObjectContainer;
             container.RegisterInstanceAs(store);
             container.RegisterInstanceAs(receiver);
+            container.RegisterInstanceAs(diagnostics);
+            container.RegisterInstanceAs(new RunWindows());
             container.RegisterInstanceAs<ITelemetryEndpoint>(new TelemetryEndpoint(receiver.Endpoint));
             container.RegisterInstanceAs(PluginOptions.FromEnvironment());
         };
