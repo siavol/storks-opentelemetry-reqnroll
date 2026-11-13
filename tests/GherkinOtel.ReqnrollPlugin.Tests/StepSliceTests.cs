@@ -33,4 +33,36 @@ public class StepSliceTests
 
         Assert.That(text, Is.EqualTo(TelemetryRenderer.NoTelemetry));
     }
+
+    private static TelemetrySpan Span(string id, string? parent, string name, double startSec) =>
+        new("t1", id, parent, name, "orders-api", SpanKind.Server, T0.AddSeconds(startSec), T0.AddSeconds(startSec + 0.5),
+            SpanStatus.Unset, new Dictionary<string, string>());
+
+    [Test]
+    public void Step_slice_contains_spans_that_started_in_the_step_window_with_their_logs_nested()
+    {
+        var inside = Span("a", null, "POST /orders", 2);
+        var scenario = new ScenarioTelemetry(new ObservationWindow(T0, T0.AddSeconds(10)),
+            [new TelemetryLog(T0.AddSeconds(2.1), "orders-api", LogSeverity.Warning, "Cat", "inner", "t1", "a")])
+        {
+            Spans = [Span("b", null, "early", 0.5), inside, Span("c", null, "late", 8)],
+        };
+
+        var slice = scenario.Slice(new ObservationWindow(T0.AddSeconds(1), T0.AddSeconds(3)));
+        var lines = TelemetryRenderer.Render(slice).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        Assert.That(slice.Spans, Is.EqualTo(new[] { inside }));
+        Assert.That(lines[0], Does.Contain("POST /orders"));
+        Assert.That(lines[1], Does.StartWith("  ").And.Contain("inner"));
+    }
+
+    [Test]
+    public void Step_slice_times_are_relative_to_the_scenario_start()
+    {
+        var scenario = new ScenarioTelemetry(new ObservationWindow(T0, T0.AddSeconds(10)), [Log(2, "in-step")]);
+
+        var text = TelemetryRenderer.Render(scenario.Slice(new ObservationWindow(T0.AddSeconds(1), T0.AddSeconds(3))));
+
+        Assert.That(text, Does.StartWith("+2.000s"));
+    }
 }

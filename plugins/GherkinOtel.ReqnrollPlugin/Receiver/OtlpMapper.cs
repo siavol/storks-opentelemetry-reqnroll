@@ -12,20 +12,19 @@ internal static class OtlpMapper
     {
         foreach (var resourceLogs in request.ResourceLogs)
         {
-            var service = resourceLogs.Resource?.Attributes
-                .FirstOrDefault(a => a.Key == "service.name")?.Value?.StringValue ?? "unknown";
+            var service = ServiceName(resourceLogs.Resource);
             foreach (var scope in resourceLogs.ScopeLogs)
             foreach (var record in scope.LogRecords)
             {
                 var nanos = record.TimeUnixNano != 0 ? record.TimeUnixNano : record.ObservedTimeUnixNano;
                 yield return new TelemetryLog(
-                    DateTimeOffset.UnixEpoch.AddTicks((long)(nanos / 100)),
+                    FromNanos(nanos),
                     service,
                     MapSeverity(record.SeverityNumber),
                     scope.Scope?.Name ?? "",
                     Format(record.Body),
-                    record.TraceId.IsEmpty ? null : Convert.ToHexStringLower(record.TraceId.ToByteArray()),
-                    record.SpanId.IsEmpty ? null : Convert.ToHexStringLower(record.SpanId.ToByteArray()));
+                    Hex(record.TraceId),
+                    Hex(record.SpanId));
             }
         }
     }
@@ -34,8 +33,7 @@ internal static class OtlpMapper
     {
         foreach (var resourceSpans in request.ResourceSpans)
         {
-            var service = resourceSpans.Resource?.Attributes
-                .FirstOrDefault(a => a.Key == "service.name")?.Value?.StringValue ?? "unknown";
+            var service = ServiceName(resourceSpans.Resource);
             foreach (var scope in resourceSpans.ScopeSpans)
             foreach (var span in scope.Spans)
             {
@@ -60,6 +58,9 @@ internal static class OtlpMapper
             }
         }
     }
+
+    private static string ServiceName(OpenTelemetry.Proto.Resource.V1.Resource? resource) =>
+        resource?.Attributes.FirstOrDefault(a => a.Key == "service.name")?.Value?.StringValue ?? "unknown";
 
     private static DateTimeOffset FromNanos(ulong nanos) => DateTimeOffset.UnixEpoch.AddTicks((long)(nanos / 100));
 

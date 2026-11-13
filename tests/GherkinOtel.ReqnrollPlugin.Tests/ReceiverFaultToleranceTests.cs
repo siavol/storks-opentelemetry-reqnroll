@@ -58,6 +58,24 @@ public class ReceiverFaultToleranceTests
         var good = await http.PostAsync(logsUrl, Proto(request.ToByteArray()));
 
         Assert.That(good.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        Assert.That(store.Snapshot().Single().Message, Is.EqualTo("ok"));
+        Assert.That(store.SnapshotLogs().Single().Message, Is.EqualTo("ok"));
+    }
+
+    [TestCase("v1/logs")]
+    [TestCase("v1/traces")]
+    public async Task Malformed_protobuf_gets_400_is_reported_and_the_receiver_keeps_running(string path)
+    {
+        var errors = new List<string>();
+        await using var receiver = new OtlpReceiver(new TelemetryStore(), errors.Add);
+        await receiver.StartAsync();
+        using var http = new HttpClient();
+
+        var bad = await http.PostAsync(new Uri(receiver.Endpoint, path), Proto([0xFF, 0xFF, 0xFF, 0xFF, 0x01]));
+        var good = await http.PostAsync(new Uri(receiver.Endpoint, path), Proto([]));
+
+        Assert.That(bad.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(errors, Has.Count.EqualTo(1));
+        Assert.That(errors[0], Does.Contain(path));
+        Assert.That(good.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 }

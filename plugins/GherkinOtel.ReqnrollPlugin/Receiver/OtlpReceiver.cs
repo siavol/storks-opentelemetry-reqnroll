@@ -35,6 +35,33 @@ public sealed class OtlpReceiver : IAsyncDisposable
         catch { /* the error sink must never break the receiver */ }
     }
 
+    /// <summary>Shared path of every signal: read body, parse, store, respond. Errors are reported and never stop the receiver.</summary>
+    private async Task Handle<TRequest, TResponse>(HttpRequest request, string path, MessageParser<TRequest> parser,
+        Action<TRequest> store, TResponse response)
+        where TRequest : IMessage<TRequest>
+        where TResponse : IMessage
+    {
+        var http = request.HttpContext.Response;
+        try
+        {
+            using var ms = new MemoryStream();
+            await request.Body.CopyToAsync(ms);
+            store(parser.ParseFrom(ms.ToArray()));
+            http.ContentType = "application/x-protobuf";
+            await http.Body.WriteAsync(response.ToByteArray());
+        }
+        catch (InvalidProtocolBufferException ex)
+        {
+            Report($"rejected invalid OTLP request to {path}: {ex.Message}");
+            http.StatusCode = StatusCodes.Status400BadRequest;
+        }
+        catch (Exception ex)
+        {
+            Report($"failed to process OTLP request to {path}: {ex}");
+            if (!http.HasStarted) http.StatusCode = StatusCodes.Status500InternalServerError;
+        }
+    }
+
     public Uri Endpoint { get; private set; } = null!;
 
     public async Task StartAsync()
@@ -44,42 +71,10 @@ public sealed class OtlpReceiver : IAsyncDisposable
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         var app = builder.Build();
 
-        app.MapPost("/v1/logs", async (HttpRequest request) =>
-        {
-            try
-            {
-                using var ms = new MemoryStream();
-                await request.Body.CopyToAsync(ms);
-                var export = ExportLogsServiceRequest.Parser.ParseFrom(ms.ToArray());
-                _store.AddLogs(OtlpMapper.MapLogs(export));
-                return Results.Bytes(new ExportLogsServiceResponse().ToByteArray(), "application/x-protobuf");
-            }
-            catch (InvalidProtocolBufferException ex)
-            {
-                Report($"rejected invalid OTLP request to /v1/logs: {ex.Message}");
-                return Results.BadRequest();
-            }
-            catch (Exception ex)
-            {
-                Report($"failed to process OTLP request to /v1/logs: {ex}");
-                return Results.StatusCode(500);
-            }
-        });
-        app.MapPost("/v1/traces", async (HttpRequest request) =>
-        {
-            try
-            {
-                using var ms = new MemoryStream();
-                await request.Body.CopyToAsync(ms);
-                var export = ExportTraceServiceRequest.Parser.ParseFrom(ms.ToArray());
-                _store.AddSpans(OtlpMapper.MapSpans(export));
-                return Results.Bytes(new ExportTraceServiceResponse().ToByteArray(), "application/x-protobuf");
-            }
-            catch (InvalidProtocolBufferException)
-            {
-                return Results.BadRequest();
-            }
-        });
+        app.MapPost("/v1/logs", ctx => Handle(ctx.Request, "/v1/logs", ExportLogsServiceRequest.Parser,
+            export => _store.AddLogs(OtlpMapper.MapLogs(export)), new ExportLogsServiceResponse()));
+        app.MapPost("/v1/traces", ctx => Handle(ctx.Request, "/v1/traces", ExportTraceServiceRequest.Parser,
+            export => _store.AddSpans(OtlpMapper.MapSpans(export)), new ExportTraceServiceResponse()));
         app.MapPost("/v1/metrics", () => Results.Bytes([], "application/x-protobuf"));
 
         await app.StartAsync();

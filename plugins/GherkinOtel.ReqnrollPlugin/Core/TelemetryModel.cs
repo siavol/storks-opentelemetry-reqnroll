@@ -23,6 +23,9 @@ public sealed record ScenarioTelemetry(ObservationWindow Window, IReadOnlyList<T
 {
     /// <summary>Spans that started in the window, chronological.</summary>
     public IReadOnlyList<TelemetrySpan> Spans { get; init; } = [];
+
+    /// <summary>Zero point of the times in the rendered text; defaults to the window start. A step slice keeps the scenario start here.</summary>
+    public DateTimeOffset? RenderOrigin { get; init; }
 }
 
 public sealed record AttributionResult(ScenarioTelemetry Scenario, IReadOnlyList<TelemetryLog> Remainder)

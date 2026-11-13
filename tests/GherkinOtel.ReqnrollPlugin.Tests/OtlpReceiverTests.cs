@@ -43,7 +43,7 @@ public class OtlpReceiverTests
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(receiver.Endpoint.IsLoopback, Is.True);
-        var log = store.Snapshot().Single();
+        var log = store.SnapshotLogs().Single();
         Assert.That(log, Is.EqualTo(new TelemetryLog(when, "orders-api", LogSeverity.Warning, "Orders.Cat", "pricing failed")));
     }
 

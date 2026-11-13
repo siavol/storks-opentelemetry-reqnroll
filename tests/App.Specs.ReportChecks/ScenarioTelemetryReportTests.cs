@@ -30,14 +30,26 @@ public class ScenarioTelemetryReportTests
     }
 
     [Test]
+    public void Step_slice_of_the_calling_step_has_pricing_500_span_and_orders_warning_under_the_orders_span()
+    {
+        var calling = CucumberMessages.Load().AttachmentsByStep(Red).Single(s => s.Key.StartsWith("the customer orders")).Value;
+
+        Assert.That(calling, Has.Some.Matches<string>(a =>
+        {
+            var tree = Subtree(a, "orders-api  POST");
+            return tree.Any(l => l.StartsWith(' ') && l.Contains("pricing-api") && l.Contains("http.response.status_code=500"))
+                && tree.Any(l => l.StartsWith(' ') && l.Contains("orders-api") && l.Contains("Warning") && l.Contains("Pricing request failed"));
+        }), "step slice lacks the Pricing 500 span or the Orders warning under the Orders POST span");
+    }
+
+    [Test]
     public void Every_step_has_a_slice_attachment_and_scenario_attachment_contains_all_slice_lines()
     {
         var messages = CucumberMessages.Load();
         foreach (var scenario in new[] { Red, Green })
         {
             var byStep = messages.AttachmentsByStep(scenario);
-            var sliceBodies = byStep.Values.SelectMany(v => v).ToList();
-            var scenarioLevel = messages.AttachmentsOfScenario(scenario).Where(a => !sliceBodies.Contains(a)).ToList();
+            var scenarioLevel = messages.ScenarioTelemetryOf(scenario);
             Assert.That(scenarioLevel, Is.Not.Empty, $"{scenario}: scenario-level attachment missing");
             var scenarioText = string.Join('\n', scenarioLevel);
             foreach (var (step, slices) in byStep)
@@ -45,7 +57,7 @@ public class ScenarioTelemetryReportTests
                 Assert.That(slices, Is.Not.Empty, $"{scenario} / {step}: no slice attachment");
                 foreach (var line in slices.SelectMany(s => s.Split('\n', StringSplitOptions.RemoveEmptyEntries)))
                     if (!line.Contains("нет телеметрии"))
-                        Assert.That(scenarioText, Does.Contain(line.Substring(line.IndexOf("s  ", StringComparison.Ordinal) + 3)));
+                        Assert.That(scenarioText, Does.Contain(line), "slice times must equal scenario times (relative to scenario start)");
             }
         }
     }
@@ -57,10 +69,16 @@ public class ScenarioTelemetryReportTests
         Assert.That(File.Exists(path), $"Run tests/App.Specs first. Not found: {path}");
         var text = File.ReadAllText(path);
 
-        // Startup telemetry from before the first scenario. Honest finding: Orders' DB init (EnsureCreated)
-        // currently lands INSIDE the first scenario window (AppHost reports healthy before it is exported/finished),
-        // so only the host startup logs (e.g. Pricing's) are reliably unattributed.
+        // Startup telemetry from before the first scenario, incl. Orders' DB init (schema creation). The test
+        // project's BeforeTestRun hook warms Orders up so that this is outside every scenario window.
         Assert.That(text, Does.Contain("Application started"));
+        Assert.That(text, Does.Contain("CREATE TABLE \"Orders\""));
+        Assert.That(text, Does.Contain("Executed DbCommand"));
+
+        // ... and is not part of any scenario's telemetry (in particular not the first scenario's).
+        foreach (var scenario in new[] { Green, Red })
+            Assert.That(string.Join('\n', CucumberMessages.Load().AttachmentsOfScenario(scenario)),
+                Does.Not.Contain("CREATE TABLE").And.Not.Contain("Application started"), scenario);
 
         // What belongs to a scenario is not repeated here.
         var scenarioLines = CucumberMessages.Load().AttachmentsOfScenario(Red)

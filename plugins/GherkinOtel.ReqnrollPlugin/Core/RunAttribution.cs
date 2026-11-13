@@ -7,18 +7,17 @@ public static class RunAttribution
     /// Telemetry not contained in any scenario window (startup, schema creation, late data), chronological.
     /// Belonging is decided by timestamp (for spans: by start time), same rule as per-scenario attribution.
     /// </summary>
-    public static IReadOnlyList<TelemetryLog> Unattributed(IEnumerable<TelemetryLog> logs, IReadOnlyCollection<ObservationWindow> scenarioWindows)
-    {
-        var rest = logs.Where(l => !scenarioWindows.Any(w => w.Contains(l.Timestamp))).ToList();
-        rest.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
-        return rest;
-    }
+    public static IReadOnlyList<TelemetryLog> Unattributed(IEnumerable<TelemetryLog> logs, IReadOnlyCollection<ObservationWindow> scenarioWindows) =>
+        Outside(logs, l => l.Timestamp, scenarioWindows);
 
     /// <summary>Spans whose start time is not contained in any scenario window, chronological.</summary>
-    public static IReadOnlyList<TelemetrySpan> UnattributedSpans(IEnumerable<TelemetrySpan> spans, IReadOnlyCollection<ObservationWindow> scenarioWindows)
+    public static IReadOnlyList<TelemetrySpan> UnattributedSpans(IEnumerable<TelemetrySpan> spans, IReadOnlyCollection<ObservationWindow> scenarioWindows) =>
+        Outside(spans, sp => sp.Start, scenarioWindows);
+
+    private static List<T> Outside<T>(IEnumerable<T> items, Func<T, DateTimeOffset> time, IReadOnlyCollection<ObservationWindow> windows)
     {
-        var rest = spans.Where(sp => !scenarioWindows.Any(w => w.Contains(sp.Start))).ToList();
-        rest.Sort((a, b) => a.Start.CompareTo(b.Start));
+        var rest = items.Where(i => !windows.Any(w => w.Contains(time(i)))).ToList();
+        rest.Sort((a, b) => time(a).CompareTo(time(b)));
         return rest;
     }
 }

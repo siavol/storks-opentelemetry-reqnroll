@@ -17,12 +17,12 @@ public static class TelemetryRenderer
         ["db.query.text", "db.statement"],
     ];
 
-    /// <summary>Text tree: spans nested by parent, logs under their span; time is relative to the window start.</summary>
+    /// <summary>Text tree: spans nested by parent, logs under their span; time is relative to the render origin (window start unless set).</summary>
     public static string Render(ScenarioTelemetry telemetry)
     {
         if (telemetry.Logs.Count == 0 && telemetry.Spans.Count == 0) return NoTelemetry;
 
-        var start = telemetry.Window.Start;
+        var start = telemetry.RenderOrigin ?? telemetry.Window.Start;
         var spanKeys = telemetry.Spans.Select(s => (s.TraceId, s.SpanId)).ToHashSet();
         var childrenOf = telemetry.Spans
             .Where(s => s.ParentSpanId is not null && spanKeys.Contains((s.TraceId, s.ParentSpanId)))

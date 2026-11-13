@@ -54,8 +54,12 @@ public sealed class CucumberMessages
         return result.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<string>)kv.Value);
     }
 
+    /// <summary>Decoded bodies of the scenario-level telemetry file (scenario-telemetry.txt) only, without step slices.</summary>
+    public IReadOnlyList<string> ScenarioTelemetryOf(string scenarioName) =>
+        AttachmentsOfScenario(scenarioName, "scenario-telemetry.txt");
+
     /// <summary>Decoded attachment bodies of the scenario (pickle) with the given name.</summary>
-    public IReadOnlyList<string> AttachmentsOfScenario(string scenarioName)
+    public IReadOnlyList<string> AttachmentsOfScenario(string scenarioName, string? fileName = null)
     {
         var pickleIds = Of("pickle").Where(p => (string?)p["name"] == scenarioName).Select(p => (string)p["id"]!).ToHashSet();
         var testCaseIds = Of("testCase").Where(t => pickleIds.Contains((string)t["pickleId"]!)).Select(t => (string)t["id"]!).ToHashSet();
@@ -63,6 +67,7 @@ public sealed class CucumberMessages
 
         return Of("attachment")
             .Where(a => a["testCaseStartedId"] is { } id && startedIds.Contains((string)id!))
+            .Where(a => fileName is null || (string?)a["fileName"] == fileName)
             .Select(a => (string?)a["contentEncoding"] == "BASE64"
                 ? Encoding.UTF8.GetString(Convert.FromBase64String((string)a["body"]!))
                 : (string)a["body"]!)

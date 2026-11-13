@@ -21,7 +21,7 @@ public static class UnattributedReport
     public static string Write(string directory, TelemetryStore store, RunWindows windows)
     {
         var snapshot = windows.Snapshot();
-        var rest = RunAttribution.Unattributed(store.Snapshot(), snapshot);
+        var rest = RunAttribution.Unattributed(store.SnapshotLogs(), snapshot);
         var restSpans = RunAttribution.UnattributedSpans(store.SnapshotSpans(), snapshot);
         // Times are relative to the first unattributed record (log or span), since there is no scenario start here.
         var origin = rest.Select(l => l.Timestamp).Concat(restSpans.Select(sp => sp.Start)).DefaultIfEmpty(DateTimeOffset.UtcNow).Min();

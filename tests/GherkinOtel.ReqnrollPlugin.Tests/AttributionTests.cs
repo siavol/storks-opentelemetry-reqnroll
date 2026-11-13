@@ -14,7 +14,7 @@ public class AttributionTests
     [Test]
     public void Log_inside_window_is_scenario_telemetry()
     {
-        var result = Attribution.Attribute([Log(5, "inside")], Window);
+        var result = Attribution.Attribute([Log(5, "inside")], [], Window);
 
         Assert.That(result.Scenario.Logs.Select(l => l.Message), Is.EqualTo(new[] { "inside" }));
         Assert.That(result.Remainder, Is.Empty);
@@ -23,7 +23,7 @@ public class AttributionTests
     [Test]
     public void Logs_before_and_after_window_go_to_remainder()
     {
-        var result = Attribution.Attribute([Log(-1, "before"), Log(5, "inside"), Log(11, "after")], Window);
+        var result = Attribution.Attribute([Log(-1, "before"), Log(5, "inside"), Log(11, "after")], [], Window);
 
         Assert.That(result.Scenario.Logs.Select(l => l.Message), Is.EqualTo(new[] { "inside" }));
         Assert.That(result.Remainder.Select(l => l.Message), Is.EquivalentTo(new[] { "before", "after" }));
@@ -32,7 +32,7 @@ public class AttributionTests
     [Test]
     public void Scenario_logs_are_chronological_regardless_of_input_order()
     {
-        var result = Attribution.Attribute([Log(7, "c"), Log(1, "a"), Log(3, "b")], Window);
+        var result = Attribution.Attribute([Log(7, "c"), Log(1, "a"), Log(3, "b")], [], Window);
 
         Assert.That(result.Scenario.Logs.Select(l => l.Message), Is.EqualTo(new[] { "a", "b", "c" }));
     }

@@ -18,7 +18,7 @@ public sealed class TelemetryStore
     }
 
     /// <summary>Copy of everything received so far.</summary>
-    public IReadOnlyList<TelemetryLog> Snapshot()
+    public IReadOnlyList<TelemetryLog> SnapshotLogs()
     {
         lock (_gate) return _logs.ToArray();
     }

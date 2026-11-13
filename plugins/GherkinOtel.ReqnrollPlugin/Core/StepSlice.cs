@@ -10,6 +10,7 @@ public static class StepSlice
         telemetry with
         {
             Window = window,
+            RenderOrigin = telemetry.RenderOrigin ?? telemetry.Window.Start,
             Logs = telemetry.Logs.Where(l => window.Contains(l.Timestamp)).ToList(),
             Spans = telemetry.Spans.Where(sp => window.Contains(sp.Start)).ToList(),
         };

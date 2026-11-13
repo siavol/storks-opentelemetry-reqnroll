@@ -29,14 +29,8 @@ public sealed class TelemetryHooks(
             var stepWindow = new ObservationWindow(_stepStart, DateTimeOffset.UtcNow);
             await Task.Delay(options.SettlePause);
 
-            var scenario = Attribution.Attribute(store.Snapshot(), new ObservationWindow(_scenarioStart, DateTimeOffset.UtcNow)).Scenario;
-            var text = TelemetryRenderer.Render(scenario.Slice(stepWindow));
-
-            var dir = Path.Combine(Path.GetTempPath(), "gherkin-otel", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(dir);
-            var file = Path.Combine(dir, "step-telemetry.txt");
-            await File.WriteAllTextAsync(file, text);
-            output.AddAttachment(file);
+            var scenario = Attribution.Attribute(store.SnapshotLogs(), store.SnapshotSpans(), new ObservationWindow(_scenarioStart, DateTimeOffset.UtcNow)).Scenario;
+            await Attach("step-telemetry.txt", TelemetryRenderer.Render(scenario.Slice(stepWindow)));
         }
         catch (Exception ex)
         {
@@ -53,14 +47,8 @@ public sealed class TelemetryHooks(
             runWindows.Add(window); // run-level remainder = what is outside every recorded window
             await Task.Delay(options.SettlePause);
 
-            var scenario = Attribution.Attribute(store.Snapshot(), store.SnapshotSpans(), window).Scenario;
-            var text = TelemetryRenderer.Render(scenario);
-
-            var dir = Path.Combine(Path.GetTempPath(), "gherkin-otel", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(dir);
-            var file = Path.Combine(dir, "scenario-telemetry.txt");
-            await File.WriteAllTextAsync(file, text);
-            output.AddAttachment(file);
+            var scenario = Attribution.Attribute(store.SnapshotLogs(), store.SnapshotSpans(), window).Scenario;
+            await Attach("scenario-telemetry.txt", TelemetryRenderer.Render(scenario));
         }
         catch (Exception ex)
         {
@@ -74,5 +62,14 @@ public sealed class TelemetryHooks(
             }
             catch { /* reporting problems must never change the scenario result */ }
         }
+    }
+
+    private async Task Attach(string name, string text)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "gherkin-otel", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var file = Path.Combine(dir, name);
+        await File.WriteAllTextAsync(file, text);
+        output.AddAttachment(file);
     }
 }

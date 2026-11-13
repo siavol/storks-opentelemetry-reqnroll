@@ -60,4 +60,23 @@ public class HookFaultToleranceTests
 
         Assert.That(windows.Snapshot(), Has.Count.EqualTo(1));
     }
+
+    [Test]
+    public async Task Step_slice_attachment_contains_spans_of_the_step_with_times_relative_to_scenario_start()
+    {
+        var output = new FakeOutput(failOnAttachment: false);
+        var store = new TelemetryStore();
+        var hooks = new TelemetryHooks(output, store, new PluginOptions(TimeSpan.Zero), new RunWindows(), new PluginDiagnostics());
+        hooks.OpenWindow();
+        await Task.Delay(1100);
+        hooks.OpenStepWindow();
+        store.AddSpans([new TelemetrySpan("t1", "s1", null, "POST /orders", "orders-api", SpanKind.Server,
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, SpanStatus.Unset, new Dictionary<string, string>())]);
+
+        await hooks.AttachStepSlice();
+
+        var text = await File.ReadAllTextAsync(output.Attachments.Single());
+        Assert.That(text, Does.Contain("POST /orders"));
+        Assert.That(text, Does.Match(@"^\+1\.\d{3}s"), "time must be relative to scenario start, not step start");
+    }
 }
