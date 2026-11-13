@@ -5,8 +5,13 @@
     <Project Path="app/Pricing.Api/Pricing.Api.csproj" />
     <Project Path="app/ServiceDefaults/ServiceDefaults.csproj" />
   </Folder>
+  <Folder Name="/plugins/">
+    <Project Path="plugins/GherkinOtel.ReqnrollPlugin/GherkinOtel.ReqnrollPlugin.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/App.Sut.Tests/App.Sut.Tests.csproj" />
+    <Project Path="tests/App.Specs.ReportChecks/App.Specs.ReportChecks.csproj" />
     <Project Path="tests/App.Specs/App.Specs.csproj" />
+    <Project Path="tests/GherkinOtel.ReqnrollPlugin.Tests/GherkinOtel.ReqnrollPlugin.Tests.csproj" />
   </Folder>
 </Solution>

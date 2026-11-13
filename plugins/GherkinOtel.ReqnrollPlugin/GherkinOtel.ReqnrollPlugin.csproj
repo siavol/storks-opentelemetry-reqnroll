@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Reqnroll runtime plugin convention: assembly name ends with .ReqnrollPlugin -->
+    <AssemblyName>GherkinOtel.ReqnrollPlugin</AssemblyName>
+    <RootNamespace>GherkinOtel.ReqnrollPlugin</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Reqnroll" Version="3.3.4" />
+    <PackageReference Include="Google.Protobuf" Version="3.36.1" />
+    <PackageReference Include="Grpc.Tools" Version="2.83.0" PrivateAssets="all" />
+    <Protobuf Include="Protos/**/*.proto" ProtoRoot="Protos" GrpcServices="None" />
+  </ItemGroup>
+</Project>

@@ -10,6 +10,7 @@
     <PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
     <PackageReference Include="Reqnroll.NUnit" Version="3.3.4" />
     <ProjectReference Include="..\..\app\AppHost\AppHost.csproj" />
+    <ProjectReference Include="..\..\plugins\GherkinOtel.ReqnrollPlugin\GherkinOtel.ReqnrollPlugin.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="reqnroll.json" CopyToOutputDirectory="PreserveNewest" />
