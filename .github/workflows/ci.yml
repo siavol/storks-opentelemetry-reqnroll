@@ -119,6 +119,7 @@ jobs:
           dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
           dotnet tool restore
 
+      # The samples are analysed but have no coverage: the E2E job runs them, the coverage is the package's unit tests.
       - name: Begin analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -129,6 +130,7 @@ jobs:
           /d:sonar.host.url=https://sonarcloud.io
           "/d:sonar.token=$SONAR_TOKEN"
           "/d:sonar.cs.vscoveragexml.reportsPaths=artifacts/coverage/**/*.xml"
+          "/d:sonar.coverage.exclusions=samples/**"
 
       - name: Build
         run: dotnet build Storks.OpenTelemetry.Reqnroll.slnx --no-restore
