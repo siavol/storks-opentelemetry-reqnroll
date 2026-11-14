@@ -119,7 +119,11 @@ flowchart LR
 4. **Attribution.** At the end of the run, each span is attributed to the window it started in, and each log to the window it was written in. Telemetry outside every scenario window, such as SUT startup or your run hooks, is Unattributed Telemetry and has its own section in the viewer.
 5. **Output.** After your `[AfterTestRun]` hooks, the plugin writes `telemetry.html`, `traces.jsonl` and `logs.jsonl` and stops the receiver. The Reqnroll report gets an **Open telemetry** link on every step and scenario.
 
-The plugin never changes a scenario's result. Its own problems (a rejected OTLP request, a file it could not write) go to the test output with the prefix `[Storks.OpenTelemetry]`.
+The plugin never changes a scenario's result. Its own lines start with `[Storks.OpenTelemetry]`. Problems during a scenario (a rejected OTLP request) go to that scenario's test output. The end-of-run lines (where the files were written, a file it could not write, the Window Overlap summary) belong to no test, so they go to the console of the test process; `dotnet test` shows that only at detailed verbosity:
+
+```sh
+dotnet test --logger "console;verbosity=detailed"
+```
 
 ## Configuration
 
@@ -147,7 +151,7 @@ The plugin warns about it. The test output of a scenario gets a line like:
 [Storks.OpenTelemetry] Window Overlap: scenario 'Pricing: Apply discount' started while 'Checkout: Pay by card' was still running, so telemetry in the overlap shows up in each of the overlapping scenarios. See https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap
 ```
 
-and the end of the run prints one summary line with the number of overlaps. In a parallel run the warning can land in the output of a neighbouring scenario; both scenario names are in the text. Sequential runs print nothing.
+and the end of the run writes one summary line with the number of overlaps to the console of the test process (with `dotnet test`, at detailed verbosity, see [How it works](#how-it-works)). In a parallel run the warning can land in the output of a neighbouring scenario; both scenario names are in the text. Sequential runs print nothing.
 
 To get exact Attribution, run the scenarios whose telemetry you care about sequentially (do not enable parallel execution for those features in your test framework). Attribution by W3C trace context (`traceparent`), which would make parallel runs exact, is planned for 0.2.
 

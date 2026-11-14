@@ -7,30 +7,31 @@ namespace Storks.OpenTelemetry.Reqnroll;
 internal static class RunHooks
 {
     // Runs after the test project's own AfterTestRun hooks (default order 10000), so that telemetry
-    // flushed by the SUT while shutting down is still received. No pause is needed here: stopping the AppHost
-    // waits for the SUT processes, which export what they have before exiting (ticket 09, demo run).
+    // flushed by the SUT while shutting down is still received. No pause is needed here: stopping the SUT
+    // waits for its processes, which export what they have before exiting.
     [AfterTestRun(Order = int.MaxValue)]
-    public static async Task FinishRun(OtlpReceiver receiver, TelemetryStore store, RunRecord record, PluginDiagnostics diagnostics, RunTracker tracker)
+    public static async Task FinishRun(OtlpReceiver receiver, TelemetryStore store, RunRecord record, PluginDiagnostics diagnostics,
+        RunTracker tracker, RunOutput output)
     {
         var directory = ReportDirectory.Resolve();
         try
         {
             var page = ViewerPage.Write(directory, record, store);
-            Console.WriteLine($"[Storks.OpenTelemetry] telemetry viewer written to {page}");
+            output.Info($"telemetry viewer written to {page}");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[Storks.OpenTelemetry] failed to write the telemetry viewer: {ex}");
+            output.Error($"failed to write the telemetry viewer: {ex}");
         }
 
         try
         {
             OtlpJsonFiles.Write(directory, store);
-            Console.WriteLine($"[Storks.OpenTelemetry] OTLP/JSON telemetry written to {directory}");
+            output.Info($"OTLP/JSON telemetry written to {directory}");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[Storks.OpenTelemetry] failed to write OTLP/JSON telemetry: {ex}");
+            output.Error($"failed to write OTLP/JSON telemetry: {ex}");
         }
 
         try
@@ -39,12 +40,12 @@ internal static class RunHooks
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[Storks.OpenTelemetry] failed to stop the receiver: {ex}");
+            output.Error($"failed to stop the receiver: {ex}");
         }
 
         // Before the drain, so that a failure to summarize is drained too.
         var summary = tracker.WindowOverlapSummary();
-        foreach (var message in diagnostics.Drain()) Console.Error.WriteLine($"[Storks.OpenTelemetry] {message}");
-        if (summary is not null) Console.Error.WriteLine($"[Storks.OpenTelemetry] {summary}");
+        foreach (var message in diagnostics.Drain()) output.Error(message);
+        if (summary is not null) output.Error(summary);
     }
 }

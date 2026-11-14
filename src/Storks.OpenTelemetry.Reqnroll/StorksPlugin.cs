@@ -33,6 +33,7 @@ internal sealed class StorksPlugin : IRuntimePlugin
             container.RegisterInstanceAs(diagnostics);
             container.RegisterInstanceAs(record);
             container.RegisterInstanceAs(new RunTracker(record, diagnostics));
+            container.RegisterInstanceAs(RunOutput.ProcessStreams());
             container.RegisterInstanceAs<ITelemetryEndpoint>(new TelemetryEndpoint(receiver.Endpoint));
         };
 

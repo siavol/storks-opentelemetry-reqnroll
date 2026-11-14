@@ -31,7 +31,7 @@ internal sealed class TelemetryHooks(IReqnrollOutputHelper output, PluginDiagnos
     {
         try
         {
-            foreach (var message in diagnostics.Drain()) output.WriteLine($"[Storks.OpenTelemetry] {message}");
+            foreach (var message in diagnostics.Drain()) output.WriteLine(PluginDiagnostics.Prefix + message);
         }
         catch { /* reporting problems must never change the scenario result */ }
     }
