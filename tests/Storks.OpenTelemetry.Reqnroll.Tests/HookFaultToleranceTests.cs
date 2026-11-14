@@ -21,15 +21,8 @@ public class HookFaultToleranceTests
         public void AddAttachment(string filePath) => throw new NotSupportedException("the plugin attaches no files");
     }
 
-    private sealed class FailingWindowOverlap : WindowOverlap
-    {
-        public override string? Opened(ScenarioRun run) => throw new InvalidOperationException("overlap check is broken");
-        public override void Closed(ScenarioRun run) => throw new InvalidOperationException("overlap check is broken");
-        public override string? Summary() => throw new InvalidOperationException("overlap check is broken");
-    }
-
-    private static TelemetryHooks Hooks(IReqnrollOutputHelper output, PluginDiagnostics diagnostics, ScenarioState state, WindowOverlap? overlap = null) =>
-        new(output, diagnostics, state, new RunTracker(new RunRecord(), diagnostics, overlap ?? new WindowOverlap()));
+    private static TelemetryHooks Hooks(IReqnrollOutputHelper output, PluginDiagnostics diagnostics, ScenarioState state, IWindowOverlap? overlap = null) =>
+        new(output, diagnostics, state, new RunTracker(new RunRecord(), diagnostics, overlap));
 
     [Test]
     public void Overlap_warning_of_a_parallel_scenario_is_written_to_its_test_output()

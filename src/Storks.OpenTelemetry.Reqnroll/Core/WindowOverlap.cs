@@ -6,7 +6,20 @@ namespace Storks.OpenTelemetry.Reqnroll;
 /// wrong scenario; this only warns and never changes Attribution. Thread-safe: parallel scenarios open and close their
 /// windows on their own threads.
 /// </summary>
-internal class WindowOverlap
+internal interface IWindowOverlap
+{
+    /// <summary>Marks the window of <paramref name="run"/> open; returns the warning if other windows are open, else null.</summary>
+    string? Opened(ScenarioRun run);
+
+    /// <summary>Marks the window of <paramref name="run"/> closed.</summary>
+    void Closed(ScenarioRun run);
+
+    /// <summary>The one end-of-run line about the overlaps noticed, or null when there were none.</summary>
+    string? Summary();
+}
+
+/// <inheritdoc cref="IWindowOverlap"/>
+internal sealed class WindowOverlap : IWindowOverlap
 {
     /// <summary>README section that explains the limitation (ticket 09 creates the heading).</summary>
     internal const string ReadmeSection = "README.md#window-overlap";
@@ -15,8 +28,7 @@ internal class WindowOverlap
     private readonly List<ScenarioRun> _open = [];
     private int _count;
 
-    /// <summary>Marks the window of <paramref name="run"/> open; returns the warning if other windows are open, else null.</summary>
-    public virtual string? Opened(ScenarioRun run)
+    public string? Opened(ScenarioRun run)
     {
         ScenarioRun[] others;
         lock (_gate)
@@ -31,13 +43,12 @@ internal class WindowOverlap
             + $"See the Window Overlap section of the package README ({ReadmeSection}).";
     }
 
-    public virtual void Closed(ScenarioRun run)
+    public void Closed(ScenarioRun run)
     {
         lock (_gate) _open.Remove(run);
     }
 
-    /// <summary>The one end-of-run line about the overlaps noticed, or null when there were none.</summary>
-    public virtual string? Summary()
+    public string? Summary()
     {
         int count;
         lock (_gate) count = _count;

@@ -10,9 +10,9 @@ internal interface ILinkWriter
 /// Records the run and hands out links. Reqnroll-independent so it can be tested directly.
 /// Failures are reported through <see cref="PluginDiagnostics"/> and never propagate: they must not change a result.
 /// </summary>
-internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics, WindowOverlap overlap)
+internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics, IWindowOverlap? overlap = null)
 {
-    public RunTracker(RunRecord record, PluginDiagnostics diagnostics) : this(record, diagnostics, new WindowOverlap()) { }
+    private readonly IWindowOverlap _overlap = overlap ?? new WindowOverlap();
 
     private static readonly string PluginAssembly = typeof(RunTracker).Assembly.GetName().Name!;
 
@@ -47,7 +47,7 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
         run.OpenWindow(start);
         try
         {
-            if (overlap.Opened(run) is { } warning) diagnostics.Report(warning);
+            if (_overlap.Opened(run) is { } warning) diagnostics.Report(warning);
         }
         catch (Exception ex) { diagnostics.Report($"failed to check Window Overlap of scenario '{run.Name}': {ex.Message}"); }
     }
@@ -62,13 +62,13 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
     /// <summary>The one end-of-run line about Window Overlap, or null when no windows overlapped.</summary>
     public string? WindowOverlapSummary()
     {
-        try { return overlap.Summary(); }
+        try { return _overlap.Summary(); }
         catch (Exception ex) { return $"failed to summarize Window Overlap: {ex.Message}"; }
     }
 
     private void LeaveOverlapCheck(ScenarioRun run)
     {
-        try { overlap.Closed(run); }
+        try { _overlap.Closed(run); }
         catch (Exception ex) { diagnostics.Report($"failed to check Window Overlap of scenario '{run.Name}': {ex.Message}"); }
     }
 

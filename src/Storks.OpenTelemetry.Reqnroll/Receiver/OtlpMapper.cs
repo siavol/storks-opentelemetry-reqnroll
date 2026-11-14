@@ -23,9 +23,9 @@ internal static class OtlpMapper
             var service = ServiceName(resourceLogs.Resource);
             for (var si = 0; si < resourceLogs.ScopeLogs.Count; si++)
             {
-                for (var li = 0; li < resourceLogs.ScopeLogs[si].LogRecords.Count; li++)
+                var scope = resourceLogs.ScopeLogs[si];
+                for (var li = 0; li < scope.LogRecords.Count; li++)
                 {
-                    var scope = resourceLogs.ScopeLogs[si];
                     var record = scope.LogRecords[li];
                     var nanos = record.TimeUnixNano != 0 ? record.TimeUnixNano : record.ObservedTimeUnixNano;
                     yield return new TelemetryLog(
