@@ -1,0 +1,50 @@
+<Project>
+  <!--
+    Samples reference the plugin like a user would: <PackageReference Include="Storks.OpenTelemetry.Reqnroll" />.
+    This file decides what that reference resolves to.
+
+    Default (project mode): the PackageReference is swapped for a ProjectReference to src/, so the plugin can be
+    edited and debugged (F5) without packing.
+
+    UseLocalPackage=true (local package mode): the package is restored from the local feed of packed nupkg files
+    ($(StorksLocalFeed), default artifacts/packages), the way a user consumes it. Run `dotnet pack` first, see
+    CONTRIBUTING.md. In this mode:
+    - packages are restored into a separate folder ($(StorksLocalRestoreDir)), so the global NuGet cache never
+      supplies a stale build, and the plugin's copy there is deleted before every restore, so re-packing the
+      same version is picked up too;
+    - the version is the highest one available (floating *-*), or exactly -p:StorksPackageVersion=X;
+    - restore is not locked: the plugin version changes with every commit, so a committed lock file cannot
+      describe it. Lock files are written to obj/ and the committed ones are left untouched. Locked-mode
+      restore of the same dependencies is verified in project mode.
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))"
+          Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../')))" />
+
+  <PropertyGroup>
+    <StorksPluginProject>$(MSBuildThisFileDirectory)../src/Storks.OpenTelemetry.Reqnroll/Storks.OpenTelemetry.Reqnroll.csproj</StorksPluginProject>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(UseLocalPackage)' != 'true' and '@(PackageReference->WithMetadataValue('Identity', 'Storks.OpenTelemetry.Reqnroll'))' != ''">
+    <PackageReference Remove="Storks.OpenTelemetry.Reqnroll" />
+    <ProjectReference Include="$(StorksPluginProject)" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(UseLocalPackage)' == 'true'">
+    <StorksLocalFeed Condition="'$(StorksLocalFeed)' == ''">$(MSBuildThisFileDirectory)../artifacts/packages</StorksLocalFeed>
+    <StorksLocalRestoreDir Condition="'$(StorksLocalRestoreDir)' == ''">$(MSBuildThisFileDirectory)../artifacts/samples-packages</StorksLocalRestoreDir>
+    <StorksPackageVersion Condition="'$(StorksPackageVersion)' == ''">*-*</StorksPackageVersion>
+    <RestoreAdditionalProjectSources>$([System.IO.Path]::GetFullPath('$(StorksLocalFeed)'))</RestoreAdditionalProjectSources>
+    <RestorePackagesPath>$([System.IO.Path]::GetFullPath('$(StorksLocalRestoreDir)'))</RestorePackagesPath>
+    <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
+    <RestoreLockedMode>false</RestoreLockedMode>
+    <NuGetLockFilePath>$(MSBuildProjectExtensionsPath)packages.local.lock.json</NuGetLockFilePath>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(UseLocalPackage)' == 'true'">
+    <PackageVersion Include="Storks.OpenTelemetry.Reqnroll" Version="$(StorksPackageVersion)" />
+  </ItemGroup>
+
+  <Target Name="StorksForgetRestoredPlugin" BeforeTargets="Restore;_GenerateRestoreGraph" Condition="'$(UseLocalPackage)' == 'true'">
+    <RemoveDir Directories="$(RestorePackagesPath)/storks.opentelemetry.reqnroll" />
+  </Target>
+</Project>

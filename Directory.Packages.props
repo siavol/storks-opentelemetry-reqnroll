@@ -19,6 +19,7 @@
     <PackageVersion Include="Reqnroll" Version="$(ReqnrollVersion)" />
     <PackageVersion Include="Google.Protobuf" Version="3.36.1" />
     <PackageVersion Include="Grpc.Tools" Version="2.83.0" />
+    <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
 
   <!-- Tests -->

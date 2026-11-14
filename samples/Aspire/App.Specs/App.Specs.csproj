@@ -9,8 +9,8 @@
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter" />
     <PackageReference Include="Reqnroll.NUnit" />
+    <PackageReference Include="Storks.OpenTelemetry.Reqnroll" />
     <ProjectReference Include="..\AppHost\AppHost.csproj" />
-    <ProjectReference Include="..\..\..\src\Storks.OpenTelemetry.Reqnroll\Storks.OpenTelemetry.Reqnroll.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="reqnroll.json" CopyToOutputDirectory="PreserveNewest" />

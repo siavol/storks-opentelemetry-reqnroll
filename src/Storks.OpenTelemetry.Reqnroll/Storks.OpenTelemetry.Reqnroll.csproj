@@ -5,12 +5,38 @@
     <AssemblyName>Storks.OpenTelemetry.ReqnrollPlugin</AssemblyName>
     <RootNamespace>Storks.OpenTelemetry.Reqnroll</RootNamespace>
   </PropertyGroup>
+
+  <!-- Package. The version comes from the git tag vX.Y.Z (MinVer); untagged builds get a unique prerelease. -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Storks.OpenTelemetry.Reqnroll</PackageId>
+    <Description>Reqnroll plugin that receives the SUT's OpenTelemetry traces and logs over OTLP during a test run and shows them by scenario and step in a Telemetry Viewer linked from the Reqnroll report.</Description>
+    <Authors>Ilya Shestakov</Authors>
+    <Copyright>Copyright (c) 2026 Ilya Shestakov</Copyright>
+    <PackageTags>reqnroll;opentelemetry;otlp;bdd;gherkin;testing</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <!-- SourceLink (built into the SDK) + symbols package; ContinuousIntegrationBuild is set in Directory.Build.props. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" Visible="false" />
+    <None Include="../../assets/icon.png" Pack="true" PackagePath="/" Visible="false" />
+  </ItemGroup>
+
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Reqnroll" />
     <PackageReference Include="Google.Protobuf" />
     <EmbeddedResource Include="Viewer/telemetry.viewer.html" LogicalName="Storks.OpenTelemetry.Reqnroll.Viewer.telemetry.viewer.html" />
     <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
+    <PackageReference Include="MinVer" PrivateAssets="all" />
     <Protobuf Include="Protos/**/*.proto" ProtoRoot="Protos" GrpcServices="None" />
   </ItemGroup>
 </Project>

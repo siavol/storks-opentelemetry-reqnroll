@@ -4,6 +4,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <!-- Only the package project is packable; it opts in. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Deterministic CI builds: normalized source paths in PDBs (SourceLink). GitHub Actions sets CI=true. -->
+  <PropertyGroup Condition="'$(CI)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <!-- Code quality: style rules and their severities live in .editorconfig; CI builds with -warnaserror. -->

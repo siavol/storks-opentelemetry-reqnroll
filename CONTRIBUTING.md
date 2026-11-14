@@ -59,16 +59,25 @@ dotnet test samples/Aspire/App.Specs --filter "TestCategory!=demo-failure"
 
 ### Package reference modes
 
-The sample's projects reference the package with a regular `PackageReference`. A shared targets file decides what it resolves to:
+The sample's projects reference the package with a regular `PackageReference`, exactly as a user's project would. `samples/Directory.Build.targets` decides what it resolves to:
 
-- **Default (project mode).** The reference is replaced with a `ProjectReference` to `src/Storks.OpenTelemetry.Reqnroll`. This is what the commands above use: edit the plugin, rerun the sample, no packing.
-- **Local package mode (`UseLocalPackage=true`).** The package is restored from a local feed of built nupkg files, exactly as a user would consume it. The sample uses a separate restore folder in this mode, so a stale build in the global NuGet cache is never picked up. CI's E2E job runs the sample this way on the nupkg produced by the build job.
+- **Default (project mode).** The reference is replaced with a `ProjectReference` to `src/Storks.OpenTelemetry.Reqnroll`. This is what the commands above use: edit the plugin, rerun the sample (or debug it with F5), no packing. Restore is locked by the committed `packages.lock.json` files as usual.
+- **Local package mode (`UseLocalPackage=true`).** The package is restored from the local feed of packed nupkg files, `artifacts/packages`, exactly as a user would consume it; this checks the packaging itself (the `.ReqnrollPlugin` assembly is found, the Telemetry Viewer is embedded). CI's E2E job runs the sample this way on the nupkg produced by the build job.
+
+Run order in local package mode:
 
 ```sh
 dotnet pack src/Storks.OpenTelemetry.Reqnroll -o artifacts/packages
-dotnet test samples/Aspire/App.Specs -p:UseLocalPackage=true
-dotnet test samples/Aspire/App.Specs.ReportChecks
+dotnet test samples/Aspire/App.Specs -p:UseLocalPackage=true     # the red @demo-failure fails by design
+dotnet test samples/Aspire/App.Specs.ReportChecks                # no flag: it only reads App.Specs' reports
 ```
+
+What the mode changes:
+
+- Packages are restored into a separate folder, `artifacts/samples-packages`, so the global NuGet cache never supplies a stale build. The plugin's copy there is deleted before every restore, so packing again at the same version is picked up too.
+- The plugin version is the highest one in the feed (a floating `*-*`). To use one exact package, add `-p:StorksPackageVersion=<version>`; the feed folder can be changed with `-p:StorksLocalFeed=<dir>`.
+- Restore is not locked in this mode: the package version changes with every commit, so a committed lock file cannot describe it. The lock file is written to `obj/packages.local.lock.json`, and the committed lock files are left untouched. All other dependencies are the same as in project mode, where locked restore checks them, so CI runs `dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode` (project mode) before the E2E run.
+- Switching between modes triggers a fresh restore of the sample; nothing needs cleaning.
 
 ## Checking the report
 
@@ -125,7 +134,9 @@ Bugs and feature requests go through the issue templates. Security vulnerabiliti
 
 ## Versioning and releases
 
-The project uses SemVer. The version comes from git tags `vX.Y.Z` through MinVer; nothing in the repository holds a version number. A build without a tag gets a unique prerelease version derived from the commit height, so a locally cached package never masks a fresh build.
+The project uses SemVer. The package version comes from git tags `vX.Y.Z` through [MinVer](https://github.com/adamralph/minver); nothing in the repository holds a version number. A build without a tag gets a unique prerelease version derived from the commit height since the last tag (for example `0.1.1-alpha.0.3`, or `0.0.0-alpha.0.17` before the first tag), so different commits never produce the same package version. MinVer needs the git history and tags: in CI, check out with full history (`fetch-depth: 0`).
+
+The package (`dotnet pack src/Storks.OpenTelemetry.Reqnroll`) contains the plugin assembly `Storks.OpenTelemetry.ReqnrollPlugin.dll` for `net10.0`, the README and icon, and a symbols package (`.snupkg`) next to it; SourceLink points the PDB at the commit. With `CI=true` the build is a deterministic CI build (`ContinuousIntegrationBuild`).
 
 To release (maintainers):
 

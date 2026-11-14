@@ -9,3 +9,6 @@ TestResults/
 
 # JetBrains IDEs
 .idea/
+
+# Build output: packed nupkg/snupkg (local feed for UseLocalPackage)
+artifacts/
