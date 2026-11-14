@@ -166,14 +166,22 @@ The project uses SemVer. The package version comes from git tags `vX.Y.Z` throug
 
 The package (`dotnet pack src/Storks.OpenTelemetry.Reqnroll`) contains the plugin assembly `Storks.OpenTelemetry.ReqnrollPlugin.dll` for `net10.0`, the README and icon, and a symbols package (`.snupkg`) next to it; SourceLink points the PDB at the commit. With `CI=true` the build is a deterministic CI build (`ContinuousIntegrationBuild`).
 
-To release (maintainers):
+To release (maintainers), tag a commit on `main` whose CI is green and push the tag:
 
 ```sh
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The tag starts `release.yml`: build, E2E on the built nupkg, then the publish job waits for approval in the `nuget` GitHub environment. After approval it pushes exactly the nupkg and snupkg that passed E2E to nuget.org through Trusted Publishing (no stored API key) and creates a GitHub Release with generated release notes. There is no `CHANGELOG.md`; the release notes are the changelog.
+The tag starts `.github/workflows/release.yml`:
+
+1. **Build:** the same `build.yml` as CI (ubuntu and windows), with the NuGet cache off, so the published package is restored from nuget.org only.
+2. **Version matches the tag:** the packed nupkg and snupkg must carry exactly the tag's version (`v0.1.0` gives `0.1.0`); otherwise the run stops before anything is published.
+3. **E2E:** the same `e2e.yml` as CI, on that nupkg.
+4. **Publish to nuget.org:** runs in the `nuget` GitHub environment, which accepts only `v*` tags and waits for a maintainer's approval (Review deployments in the run). It is the only job with `id-token: write`: `NuGet/login` exchanges the OIDC token for a short-lived API key through Trusted Publishing (no stored API key; the nuget.org user is the `NUGET_USER` repository variable), and `dotnet nuget push` pushes exactly the nupkg and snupkg that passed E2E, without a rebuild.
+5. **GitHub Release:** created for the tag with generated release notes and the nupkg attached. A version with a prerelease suffix (`v0.2.0-rc.1`) becomes a prerelease on nuget.org and on GitHub.
+
+There is no `CHANGELOG.md`; the release notes are the changelog. A version on nuget.org cannot be deleted or replaced, only unlisted, so a broken release is fixed by a new version. After a release, move the entries of `src/Storks.OpenTelemetry.Reqnroll/PublicAPI.Unshipped.txt` to `PublicAPI.Shipped.txt`.
 
 ## License
 
