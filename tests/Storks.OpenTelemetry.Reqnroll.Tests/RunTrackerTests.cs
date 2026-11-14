@@ -146,4 +146,14 @@ public class RunTrackerTests
             .And.Contain("shows up in each of the overlapping scenarios")
             .And.Contain(WindowOverlapSection));
     }
+
+    [Test]
+    public void Failing_overlap_summary_gives_no_summary_and_is_reported_as_a_diagnostic()
+    {
+        var diagnostics = new PluginDiagnostics();
+        var tracker = new RunTracker(new RunRecord(), diagnostics, new FailingWindowOverlap());
+
+        Assert.That(tracker.WindowOverlapSummary(), Is.Null);
+        Assert.That(diagnostics.Drain(), Has.One.Contain("failed to summarize Window Overlap").And.Contain("overlap check is broken"));
+    }
 }

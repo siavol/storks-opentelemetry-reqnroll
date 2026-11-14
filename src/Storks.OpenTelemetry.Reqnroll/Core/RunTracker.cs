@@ -59,11 +59,15 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
         LeaveOverlapCheck(run);
     }
 
-    /// <summary>The one end-of-run line about Window Overlap, or null when no windows overlapped.</summary>
+    /// <summary>The one end-of-run line about Window Overlap, or null when no windows overlapped or the summary failed.</summary>
     public string? WindowOverlapSummary()
     {
         try { return _overlap.Summary(); }
-        catch (Exception ex) { return $"failed to summarize Window Overlap: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            diagnostics.Report($"failed to summarize Window Overlap: {ex.Message}");
+            return null;
+        }
     }
 
     private void LeaveOverlapCheck(ScenarioRun run)

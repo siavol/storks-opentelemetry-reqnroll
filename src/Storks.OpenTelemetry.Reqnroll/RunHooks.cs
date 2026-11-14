@@ -42,7 +42,9 @@ internal static class RunHooks
             Console.Error.WriteLine($"[Storks.OpenTelemetry] failed to stop the receiver: {ex}");
         }
 
+        // Before the drain, so that a failure to summarize is drained too.
+        var summary = tracker.WindowOverlapSummary();
         foreach (var message in diagnostics.Drain()) Console.Error.WriteLine($"[Storks.OpenTelemetry] {message}");
-        if (tracker.WindowOverlapSummary() is { } summary) Console.Error.WriteLine($"[Storks.OpenTelemetry] {summary}");
+        if (summary is not null) Console.Error.WriteLine($"[Storks.OpenTelemetry] {summary}");
     }
 }
