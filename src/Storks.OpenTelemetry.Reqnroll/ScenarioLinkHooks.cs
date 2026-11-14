@@ -4,7 +4,7 @@ namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>Writes the scenario-level Telemetry Viewer link (log message of this AfterScenario hook). Never changes the scenario result.</summary>
 [Binding]
-public sealed class ScenarioLinkHooks(IScenarioContext scenarioContext, IReqnrollOutputHelper output, RunRecord record, RunTracker tracker, PluginDiagnostics diagnostics)
+internal sealed class ScenarioLinkHooks(IScenarioContext scenarioContext, IReqnrollOutputHelper output, RunRecord record, RunTracker tracker, PluginDiagnostics diagnostics)
 {
     [AfterScenario(Order = TelemetryHooks.ScenarioLinkOrder)]
     public void WriteScenarioLink()

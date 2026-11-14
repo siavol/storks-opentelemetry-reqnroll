@@ -1,7 +1,7 @@
 namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>Links to the Telemetry Viewer page; relative, since the page lies next to the report.</summary>
-public static class TelemetryLinks
+internal static class TelemetryLinks
 {
     public const string PageName = "telemetry.html";
 

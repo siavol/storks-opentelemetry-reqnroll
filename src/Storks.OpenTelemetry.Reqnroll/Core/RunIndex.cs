@@ -8,13 +8,13 @@ namespace Storks.OpenTelemetry.Reqnroll;
 /// telemetry attributed to it: <see cref="SpanIds"/> are the spans (OTLP span id, hex) that started in it, <see cref="LogIds"/>
 /// the logs (<see cref="TelemetryLog.Id"/>) written in it, both chronological.
 /// </summary>
-public abstract record AttributedWindow(string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds);
+internal abstract record AttributedWindow(string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds);
 
 /// <summary>Ids of spans (OTLP span id, hex) and logs (<see cref="TelemetryLog.Id"/>), chronological.</summary>
-public sealed record TelemetryIds(IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds);
+internal sealed record TelemetryIds(IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds);
 
 /// <summary>A step of a scenario run; its window does not include its BeforeStep and AfterStep hooks.</summary>
-public sealed record StepIndexEntry(
+internal sealed record StepIndexEntry(
     int Number, string Keyword, string Text, string Status, long OffsetMs, long DurationMs, string? Error,
     string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds)
     : AttributedWindow(StartUnixNano, EndUnixNano, SpanIds, LogIds);
@@ -24,7 +24,7 @@ public sealed record StepIndexEntry(
 /// Unattributed Telemetry. <see cref="Name"/> is <c>Class.Method</c>; <see cref="OffsetMs"/> is from the start of the
 /// scenario or of the run.
 /// </summary>
-public sealed record HookIndexEntry(
+internal sealed record HookIndexEntry(
     string HookType, string Name, string Status, long OffsetMs, long DurationMs,
     string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds)
     : AttributedWindow(StartUnixNano, EndUnixNano, SpanIds, LogIds);
@@ -37,7 +37,7 @@ public sealed record HookIndexEntry(
 /// with their subtree, the logs of those spans, and the logs written in hook windows that have no span of their own among
 /// the other spans of the scenario (a log of a step's span stays with its span even when written in a hook window).
 /// </summary>
-public sealed record ScenarioIndexEntry(
+internal sealed record ScenarioIndexEntry(
     string Id, string Name, string Status, IReadOnlyList<string> Tags, long DurationMs, string? Error, IReadOnlyList<StepIndexEntry> Steps,
     IReadOnlyList<HookIndexEntry> Hooks, TelemetryIds HookTelemetry,
     string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds)
@@ -48,23 +48,25 @@ public sealed record ScenarioIndexEntry(
 /// runs from the run start to the end of its last window). <see cref="Hooks"/> are the run and feature hook calls of the
 /// test project by start time with the part of that telemetry that started in their windows; the rest lies outside any window.
 /// </summary>
-public sealed record UnattributedIndexEntry(
+internal sealed record UnattributedIndexEntry(
     IReadOnlyList<HookIndexEntry> Hooks, string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds)
     : AttributedWindow(StartUnixNano, EndUnixNano, SpanIds, LogIds);
 
 /// <summary>A feature; <see cref="Uri"/> is the path of its feature file, if known.</summary>
-public sealed record FeatureIndexEntry(string Name, IReadOnlyList<ScenarioIndexEntry> Scenarios, string? Uri);
+internal sealed record FeatureIndexEntry(string Name, IReadOnlyList<ScenarioIndexEntry> Scenarios, string? Uri);
 
 /// <summary>
 /// The attribution index embedded into the Telemetry Viewer page: features, scenario runs, steps, and which spans are
 /// attributed to each run and step, and the Unattributed Telemetry. Attribution rule: a span belongs
 /// to the window it started in, a log to the window it was written in (by its own time, regardless of its span).
 /// </summary>
-public sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, UnattributedIndexEntry Unattributed)
+internal sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, UnattributedIndexEntry Unattributed)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     /// <summary>Index of the whole run: scenario runs, and the run and feature hooks on the scale of Unattributed Telemetry.</summary>
+    /// <param name="record">The run's scenarios and hooks.</param>
+    /// <param name="spans">Received spans.</param>
     /// <param name="logs">Received logs; those without an <see cref="TelemetryLog.Id"/> cannot be referenced and are left out.</param>
     public static RunIndex Build(RunRecord record, IReadOnlyList<TelemetrySpan>? spans = null, IReadOnlyList<TelemetryLog>? logs = null) =>
         Build(record.Snapshot(), record.RunHooks(), record.Start, spans, logs);
@@ -135,7 +137,9 @@ public sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, Unattri
         return new(hooks, UnixNano(start), UnixNano(end), Ids(restSpans), Ids(restLogs));
     }
 
+    /// <param name="h">The hook run to index.</param>
     /// <param name="origin">Start of the scenario or of the run, for <see cref="HookIndexEntry.OffsetMs"/>.</param>
+    /// <param name="attributor">Assigns the hook's window its telemetry.</param>
     private static HookIndexEntry HookEntry(HookRun h, DateTimeOffset origin, Attributor attributor)
     {
         var (hookSpans, hookLogs) = attributor.Take(h.Start, h.End);

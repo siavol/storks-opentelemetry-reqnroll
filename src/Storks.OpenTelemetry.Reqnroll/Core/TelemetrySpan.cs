@@ -1,11 +1,11 @@
 namespace Storks.OpenTelemetry.Reqnroll;
 
-public enum SpanKind { Unspecified, Internal, Server, Client, Producer, Consumer }
+internal enum SpanKind { Unspecified, Internal, Server, Client, Producer, Consumer }
 
-public enum SpanStatus { Unset, Ok, Error }
+internal enum SpanStatus { Unset, Ok, Error }
 
 /// <summary>Neutral span; independent of OTLP and Activity. <c>End</c> is null when the span is not finished.</summary>
-public sealed record TelemetrySpan(
+internal sealed record TelemetrySpan(
     string TraceId,
     string SpanId,
     string? ParentSpanId,

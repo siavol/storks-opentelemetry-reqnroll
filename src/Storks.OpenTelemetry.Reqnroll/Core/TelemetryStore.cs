@@ -4,7 +4,7 @@ using OpenTelemetry.Proto.Collector.Trace.V1;
 namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>Everything received up to one moment: the neutral model and the accepted OTLP requests, consistent with each other.</summary>
-public sealed record TelemetrySnapshot(
+internal sealed record TelemetrySnapshot(
     IReadOnlyList<TelemetrySpan> Spans, IReadOnlyList<TelemetryLog> Logs,
     IReadOnlyList<ExportTraceServiceRequest> TraceRequests, IReadOnlyList<ExportLogsServiceRequest> LogRequests);
 
@@ -12,7 +12,7 @@ public sealed record TelemetrySnapshot(
 /// Thread-safe accumulator of everything received during the run: the neutral model (used for Attribution, ADR 0001)
 /// and the accepted OTLP requests as received (written to the OTLP/JSON files and the viewer without loss, ADR 0002).
 /// </summary>
-public sealed class TelemetryStore
+internal sealed class TelemetryStore
 {
     private readonly object _gate = new();
     private readonly List<TelemetryLog> _logs = [];

@@ -24,6 +24,10 @@ _Avoid_: correlation, matching, binding
 The time interval of a scenario or step; telemetry that started within this interval belongs to it.
 _Avoid_: time range, timeframe, slot
 
+**Window Overlap**:
+The Observation Window of one scenario opening while another scenario's window is still open, as happens when scenarios run in parallel. Attribution goes by time only, so telemetry within the overlap may be attributed to the wrong scenario; the plugin warns about it in the test output.
+_Avoid_: collision, parallel conflict
+
 **Step Slice**:
 The part of Scenario Telemetry that started within the Observation Window of one scenario step.
 _Avoid_: step telemetry

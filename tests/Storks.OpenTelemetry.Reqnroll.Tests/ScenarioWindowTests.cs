@@ -33,7 +33,8 @@ public class ScenarioWindowTests
     {
         var record = new RunRecord();
         var state = new ScenarioState { Run = record.Begin("F", "S", [], DateTimeOffset.UtcNow.AddSeconds(-5)) };
-        var hooks = new TelemetryHooks(new NullOutput(), new PluginDiagnostics(), state);
+        var diagnostics = new PluginDiagnostics();
+        var hooks = new TelemetryHooks(new NullOutput(), diagnostics, state, new RunTracker(record, diagnostics));
 
         var beforeOpen = DateTimeOffset.UtcNow;
         hooks.OpenWindow();

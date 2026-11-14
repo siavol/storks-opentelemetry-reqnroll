@@ -3,7 +3,7 @@ using System.Text;
 namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>Writes everything received over OTLP as OTLP/JSON Lines: one line per accepted request, no filtering.</summary>
-public static class OtlpJsonFiles
+internal static class OtlpJsonFiles
 {
     public const string TracesFileName = "traces.jsonl";
     public const string LogsFileName = "logs.jsonl";

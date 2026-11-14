@@ -1,16 +1,16 @@
 namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>One Gherkin step of one scenario run, as it actually ran.</summary>
-public sealed record StepRun(int Number, string Keyword, string Text, DateTimeOffset Start, DateTimeOffset End, string Status, string? Error);
+internal sealed record StepRun(int Number, string Keyword, string Text, DateTimeOffset Start, DateTimeOffset End, string Status, string? Error);
 
 /// <summary>One call of a hook of the test project (a scenario hook such as BeforeScenario or AfterStep, or a run or feature hook): type, method (<c>Class.Method</c>) and window.</summary>
-public sealed record HookRun(string HookType, string Name, DateTimeOffset Start, DateTimeOffset End, string Status);
+internal sealed record HookRun(string HookType, string Name, DateTimeOffset Start, DateTimeOffset End, string Status);
 
 /// <summary>
 /// One run of a scenario. Outline examples and retries are separate runs, each with its own <see cref="Id"/>.
 /// A scenario runs on a single thread, so the run itself needs no locking.
 /// </summary>
-public sealed class ScenarioRun
+internal sealed class ScenarioRun
 {
     private readonly List<StepRun> _steps = [];
     private readonly List<HookRun> _hooks = [];
@@ -69,6 +69,8 @@ public sealed class ScenarioRun
     }
 
     /// <param name="end">End of the window unless <see cref="CloseWindow"/> has closed it already.</param>
+    /// <param name="status">Final status of the scenario.</param>
+    /// <param name="error">Error message of a failed scenario.</param>
     public void Finish(DateTimeOffset end, string status, string? error)
     {
         if (!_closed) End = end;
@@ -82,7 +84,7 @@ public sealed class ScenarioRun
 /// calls (BeforeTestRun, BeforeFeature, AfterFeature, AfterTestRun) of the test project. <see cref="Start"/> is the start
 /// of the run's scale in the viewer: the record is created when the plugin starts, before any hook runs.
 /// </summary>
-public sealed class RunRecord(DateTimeOffset start)
+internal sealed class RunRecord(DateTimeOffset start)
 {
     private readonly object _gate = new();
     private readonly List<ScenarioRun> _runs = [];

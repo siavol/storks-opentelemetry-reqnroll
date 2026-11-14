@@ -8,7 +8,7 @@ namespace Storks.OpenTelemetry.Reqnroll;
 /// Serializes an OTLP export request as a single line of OTLP/JSON (as the OTLP File Exporter writes it):
 /// camelCase names, enums as numbers, 64-bit integers as strings, trace/span ids as hex instead of base64.
 /// </summary>
-public static class OtlpJson
+internal static class OtlpJson
 {
     private static readonly JsonFormatter Formatter = new(JsonFormatter.Settings.Default.WithFormatEnumsAsIntegers(true));
 
