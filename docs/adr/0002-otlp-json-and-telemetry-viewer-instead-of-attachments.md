@@ -1,19 +1,19 @@
-# Стандартный OTLP/JSON и собственный Telemetry Viewer рядом с отчётом Reqnroll вместо текста во вложениях
+# Standard OTLP/JSON and our own Telemetry Viewer next to the Reqnroll report instead of text in attachments
 
-Телеметрию прогона плагин сохраняет в папку отчёта в стандартном формате OTLP/JSON Lines (`traces.jsonl`, `logs.jsonl`, как у OTLP File Exporter), а смотреть её предполагается в собственном просмотрщике (Telemetry Viewer, `telemetry.html`) рядом с отчётом. Текстовые вложения к сценариям и шагам заменяются ссылками на просмотрщик.
+The plugin saves the run's telemetry to the report folder in the standard OTLP/JSON Lines format (`traces.jsonl`, `logs.jsonl`, as the OTLP File Exporter does), and it is meant to be viewed in our own viewer (the Telemetry Viewer, `telemetry.html`) next to the report. Text attachments on scenarios and steps are replaced by links to the viewer.
 
-Причина — ограничения HTML-форматтера Reqnroll: текстовые вложения показываются без UTF-8 (кириллица и спецсимволы портятся), а HTML во вложениях не рендерится, поэтому дерево спанов с логами остаётся плоским текстом.
+The reason is the limitations of the Reqnroll HTML formatter: text attachments are shown without UTF-8 (Cyrillic and special characters get garbled), and HTML in attachments is not rendered, so the span tree with logs stays flat text.
 
-## Рассмотренные варианты
+## Considered options
 
-- **Текст во вложениях** (было). Не требует новых артефактов, но упирается в кодировку и отсутствие рендеринга; waterfall и навигацию в тексте не сделать.
-- **Внешний инструмент** (Jaeger, Aspire Dashboard и т. п.). Требует поднимать сервис, не работает из скачанного CI-артефакта без сети и не знает про сценарии и шаги. Стандартные файлы при этом остаются доступны любому такому инструменту.
-- **Свой отчёт целиком** вместо отчёта Reqnroll. Слишком дорого: пришлось бы повторять всё, что уже делает форматтер.
+- **Text in attachments** (the previous approach). Needs no new artifacts, but hits the encoding problem and the lack of rendering; a waterfall and navigation cannot be done in text.
+- **An external tool** (Jaeger, Aspire Dashboard, etc.). Requires running a service, does not work from a downloaded CI artifact without network access, and knows nothing about scenarios and steps. The standard files still remain available to any such tool.
+- **Our own report entirely** instead of the Reqnroll report. Too expensive: we would have to repeat everything the formatter already does.
 
 ## Consequences
 
-- Хранилище, кроме нейтральной модели (она остаётся для Attribution, см. ADR 0001), держит исходные принятые OTLP-запросы. В файлы они пишутся без потерь и без фильтрации по сценариям, включая Unattributed Telemetry: одна строка — один `ExportTraceServiceRequest` или `ExportLogsServiceRequest`.
-- Файлы пишутся один раз, в конце прогона, в папку отчёта рядом с `telemetry.html` (`STORKS_OTEL_REPORT_DIR` переопределяет). Если прогон не дойдёт до конца, файлов не будет.
-- Ошибка записи файлов не меняет результат прогона: она пишется в диагностический вывод.
-- Ссылка на просмотрщик в отчёте — не вложение, а лог-сообщение `<a href>` через `IReqnrollOutputHelper.WriteLine` (`text/x.cucumber.log+plain`): форматтер рендерит его как HTML, и ссылка кликабельна. Вложение `text/html` показывается экранированным исходником, а `text/uri-list` через `AddAttachment` не получить.
-- Сериализация следует OTLP/JSON, а не «protobuf JSON по умолчанию»: идентификаторы trace/span в hex, enum числами, время в наносекундах строкой.
+- Besides the neutral model (which stays for Attribution, see ADR 0001), the store keeps the original received OTLP requests. They are written to the files losslessly and without filtering by scenario, including Unattributed Telemetry: one line is one `ExportTraceServiceRequest` or `ExportLogsServiceRequest`.
+- The files are written once, at the end of the run, to the report folder next to `telemetry.html` (`STORKS_OTEL_REPORT_DIR` overrides it). If the run does not reach the end, there are no files.
+- A failure to write the files does not change the run's result: it goes to the diagnostic output.
+- The viewer link in the report is not an attachment but a log message `<a href>` via `IReqnrollOutputHelper.WriteLine` (`text/x.cucumber.log+plain`): the formatter renders it as HTML, and the link is clickable. A `text/html` attachment is shown as escaped source, and `text/uri-list` cannot be produced through `AddAttachment`.
+- Serialization follows OTLP/JSON, not "default protobuf JSON": trace/span ids in hex, enums as numbers, time in nanoseconds as a string.

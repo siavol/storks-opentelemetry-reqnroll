@@ -1,37 +1,37 @@
 # Storks.OpenTelemetry.Reqnroll
 
-Эксперимент: сбор телеметрии тестируемого приложения во время прогона Reqnroll-сценариев и показ её рядом с отчётом о тестах, чтобы по отчёту было видно, что происходило внутри приложения.
+An experiment: collect the telemetry of the application under test while Reqnroll scenarios run and show it next to the test report, so the report shows what was happening inside the application.
 
 ## Language
 
 **System Under Test (SUT)**:
-Приложение, поведение которого проверяют сценарии и чью телеметрию собирают.
-_Avoid_: сервис, app, target
+The application whose behavior the scenarios verify and whose telemetry is collected.
+_Avoid_: service, app, target
 
 **Scenario Telemetry**:
-Трейсы и логи SUT, отнесённые к конкретному сценарию (и, по возможности, шагу) тестового прогона.
-_Avoid_: captured telemetry, test traces, дамп
+SUT traces and logs attributed to a specific scenario (and, where possible, step) of a test run.
+_Avoid_: captured telemetry, test traces, dump
 
 **Telemetry Source**:
-Откуда поступает телеметрия SUT: из того же процесса, что и тесты (in-process), или от отдельно запущенного приложения (out-of-process).
+Where SUT telemetry comes from: the same process as the tests (in-process) or a separately started application (out-of-process).
 _Avoid_: exporter, receiver, provider
 
 **Attribution**:
-Отнесение единицы телеметрии к сценарию или шагу.
+Assigning a unit of telemetry to a scenario or step.
 _Avoid_: correlation, matching, binding
 
 **Observation Window**:
-Интервал времени сценария или шага; телеметрия, начавшаяся в этом интервале, относится к нему.
+The time interval of a scenario or step; telemetry that started within this interval belongs to it.
 _Avoid_: time range, timeframe, slot
 
 **Step Slice**:
-Часть Scenario Telemetry, начавшаяся в Observation Window одного шага сценария.
-_Avoid_: step telemetry, телеметрия шага
+The part of Scenario Telemetry that started within the Observation Window of one scenario step.
+_Avoid_: step telemetry
 
 **Telemetry Viewer**:
-Самодостаточная HTML-страница `telemetry.html` рядом с отчётом Reqnroll, на которой смотрят телеметрию прогона: Scenario Telemetry по сценариям и шагам (waterfall спанов, логи и свойства на одной временной шкале) и Unattributed Telemetry. В самом отчёте Reqnroll только ссылки на неё.
-_Avoid_: dashboard, дашборд, отчёт телеметрии, вложение
+The self-contained HTML page `telemetry.html` next to the Reqnroll report where the run's telemetry is viewed: Scenario Telemetry by scenario and step (a span waterfall, logs and properties on one timeline) and Unattributed Telemetry. The Reqnroll report itself only contains links to it.
+_Avoid_: dashboard, telemetry report, attachment
 
 **Unattributed Telemetry**:
-Телеметрия SUT, которую не удалось отнести ни к одному сценарию.
-_Avoid_: orphan spans, шум
+SUT telemetry that could not be attributed to any scenario.
+_Avoid_: orphan spans, noise
