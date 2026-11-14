@@ -76,7 +76,7 @@ What the mode changes:
 
 - Packages are restored into a separate folder, `artifacts/samples-packages`, so the global NuGet cache never supplies a stale build. The plugin's copy there is deleted before every restore, so packing again at the same version is picked up too.
 - The plugin version is the highest one in the feed (a floating `*-*`). To use one exact package, add `-p:StorksPackageVersion=<version>`; the feed folder can be changed with `-p:StorksLocalFeed=<dir>`.
-- Restore is not locked in this mode: the package version changes with every commit, so a committed lock file cannot describe it. The lock file is written to `obj/packages.local.lock.json`, and the committed lock files are left untouched. All other dependencies are the same as in project mode, where locked restore checks them, so CI runs `dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode` (project mode) before the E2E run.
+- Restore is not locked in this mode, even with `CI=true`: the package version changes with every commit, so a committed lock file cannot describe it. The lock file is written to `obj/packages.local.lock.json` and re-evaluated on every restore, so the committed lock files are left untouched. All other dependencies are the same as in project mode, where locked restore checks them, so CI runs `dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode` (project mode) before the E2E run.
 - Switching between modes triggers a fresh restore of the sample; nothing needs cleaning.
 
 ## Checking the report

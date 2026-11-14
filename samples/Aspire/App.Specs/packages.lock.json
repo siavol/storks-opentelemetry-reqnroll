@@ -832,7 +832,7 @@
           "Aspire.Hosting.PostgreSQL": "[13.6.5, )"
         }
       },
-      "Storks.OpenTelemetry.ReqnrollPlugin": {
+      "storks.opentelemetry.reqnroll": {
         "type": "Project",
         "dependencies": {
           "Google.Protobuf": "[3.36.1, )",
