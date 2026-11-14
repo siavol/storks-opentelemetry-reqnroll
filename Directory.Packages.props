@@ -2,13 +2,17 @@
   <!--
     Central Package Management: every package version lives here, csproj files carry no Version.
     Versions shared by a package family are properties so the family moves together.
-    ReqnrollVersion can be overridden from the command line (-p:ReqnrollVersion=3.x.y) to build and test
-    against another Reqnroll.
+    Reqnroll has two properties:
+    - ReqnrollMinVersion is the oldest Reqnroll the plugin is verified on. The plugin depends on
+      [ReqnrollMinVersion, 4.0) and compiles against that lower bound, so the package accepts any 3.x from it up.
+    - ReqnrollVersion is the concrete Reqnroll the unit tests and the samples run on (VersionOverride in their
+      csproj). Override it from the command line (-p:ReqnrollVersion=3.x.y) to test against another Reqnroll.
     The only version outside this file is the Aspire.AppHost.Sdk MSBuild SDK: MSBuild resolves SDKs before
     any property is evaluated, so it is pinned in global.json ("msbuild-sdks") and must match AspireVersion.
   -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <ReqnrollMinVersion>3.0.0</ReqnrollMinVersion>
     <ReqnrollVersion Condition="'$(ReqnrollVersion)' == ''">3.3.4</ReqnrollVersion>
     <AspireVersion>13.6.5</AspireVersion>
     <OpenTelemetryVersion>1.21.0</OpenTelemetryVersion>
@@ -16,7 +20,7 @@
 
   <!-- Plugin -->
   <ItemGroup>
-    <PackageVersion Include="Reqnroll" Version="$(ReqnrollVersion)" />
+    <PackageVersion Include="Reqnroll" Version="[$(ReqnrollMinVersion), 4.0)" />
     <PackageVersion Include="Google.Protobuf" Version="3.36.1" />
     <PackageVersion Include="Grpc.Tools" Version="2.83.0" />
   </ItemGroup>

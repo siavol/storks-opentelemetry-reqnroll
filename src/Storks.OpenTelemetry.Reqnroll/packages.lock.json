@@ -16,14 +16,14 @@
       },
       "Reqnroll": {
         "type": "Direct",
-        "requested": "[3.3.4, )",
-        "resolved": "3.3.4",
-        "contentHash": "tFFx0xACekjT9F/aFZjQMNTbaxy7zNU4uXFXvU1Eybuko2Rx1RLCAzN+uPDiDxsGB/Nd0wZC0M8Ho5i9xm8Jdg==",
+        "requested": "[3.0.0, 4.0.0)",
+        "resolved": "3.0.0",
+        "contentHash": "b2f0QERw3sdHjh3gRVxHp32sa3Sm816Wv6G+o7W8q2PnjMkylEaqUYF/kQnaQJ98omqqfCmD/JSFDrrFM/IYpg==",
         "dependencies": {
           "Cucumber.CucumberExpressions": "17.1.0",
-          "Cucumber.HtmlFormatter": "22.2.0",
-          "Cucumber.Messages": "30.1.0",
-          "Gherkin": "35.0.0",
+          "Cucumber.HtmlFormatter": "21.14.0",
+          "Cucumber.Messages": "28.0.0",
+          "Gherkin": "34.0.0",
           "Microsoft.Bcl.AsyncInterfaces": "9.0.6",
           "Microsoft.Extensions.DependencyModel": "8.0.2"
         }
@@ -35,23 +35,23 @@
       },
       "Cucumber.HtmlFormatter": {
         "type": "Transitive",
-        "resolved": "22.2.0",
-        "contentHash": "hlP9GGzRADDKh0/GEt2aWD9G08qEDD4z6TC6iqJt3xH8kiU3iAbg1rOCtorN13zNdaaVxdraHzznWTMT/DnM1g==",
+        "resolved": "21.14.0",
+        "contentHash": "pkGsMqbLoLXk6nTYQqFqtWRov8bkVpQKwZRj31Q1xd9m+1ClyHA2rZtVMh4ecakujU62ksTh48qCbw9xi1E+Wg==",
         "dependencies": {
-          "Cucumber.Messages": "30.1.0"
+          "Cucumber.Messages": "[27.0.0, 29.0.0)"
         }
       },
       "Cucumber.Messages": {
         "type": "Transitive",
-        "resolved": "30.1.0",
-        "contentHash": "HDfIzDd7JFDEwiNHpgOHBPEiyVjXQws+CEnVb+Lwiq58jHNA/xYwmTswbqknOxcAejCRFP1de/hHHw+ZuTzV6A=="
+        "resolved": "28.0.0",
+        "contentHash": "Kthb+tAd8sKlbBrtxMRI6j8lU8cn/MzbDAPfXuHFTfK2dc6z7777SZV7rnEUrXHisw3l3U5gXRB3BG24B6lwKw=="
       },
       "Gherkin": {
         "type": "Transitive",
-        "resolved": "35.0.0",
-        "contentHash": "ha+QNevQsXEESbzazUceHTCtKOjoBTBa8kLFdKpu6vSEbb3UMt3a55RG78tIoU/C4qzIqX3jQxaIdIcYGO+IWQ==",
+        "resolved": "34.0.0",
+        "contentHash": "C7S8aXKI65TfDpwVBkQlRbrqjj4Bv/Qf5CdZPrSJnfdUU9CZZtpLrovuR31iVMR8Oe2XEkdhacHnDUMBNipu/w==",
         "dependencies": {
-          "Cucumber.Messages": "29.0.1"
+          "Cucumber.Messages": "[28.0.0, 29.0.0)"
         }
       },
       "Microsoft.Bcl.AsyncInterfaces": {

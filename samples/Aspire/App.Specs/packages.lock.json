@@ -65,6 +65,20 @@
           "Microsoft.Testing.Platform.MSBuild": "1.9.0"
         }
       },
+      "Reqnroll": {
+        "type": "Direct",
+        "requested": "[3.3.4, )",
+        "resolved": "3.3.4",
+        "contentHash": "tFFx0xACekjT9F/aFZjQMNTbaxy7zNU4uXFXvU1Eybuko2Rx1RLCAzN+uPDiDxsGB/Nd0wZC0M8Ho5i9xm8Jdg==",
+        "dependencies": {
+          "Cucumber.CucumberExpressions": "17.1.0",
+          "Cucumber.HtmlFormatter": "22.2.0",
+          "Cucumber.Messages": "30.1.0",
+          "Gherkin": "35.0.0",
+          "Microsoft.Bcl.AsyncInterfaces": "9.0.6",
+          "Microsoft.Extensions.DependencyModel": "8.0.2"
+        }
+      },
       "Reqnroll.NUnit": {
         "type": "Direct",
         "requested": "[3.3.4, )",
@@ -836,7 +850,7 @@
         "type": "Project",
         "dependencies": {
           "Google.Protobuf": "[3.36.1, )",
-          "Reqnroll": "[3.3.4, )"
+          "Reqnroll": "[3.0.0, 4.0.0)"
         }
       },
       "Aspire.Hosting.PostgreSQL": {
@@ -901,20 +915,6 @@
         "contentHash": "t1OwL/4qgboGMobYVT+UV5zgWnFqCp4Pw8lcsmzh8m2K8PQsTKkyxrC32tqYTMYny3GOW4q5cltE3dTVzLmRew==",
         "dependencies": {
           "OpenTelemetry": "1.17.0"
-        }
-      },
-      "Reqnroll": {
-        "type": "CentralTransitive",
-        "requested": "[3.3.4, )",
-        "resolved": "3.3.4",
-        "contentHash": "tFFx0xACekjT9F/aFZjQMNTbaxy7zNU4uXFXvU1Eybuko2Rx1RLCAzN+uPDiDxsGB/Nd0wZC0M8Ho5i9xm8Jdg==",
-        "dependencies": {
-          "Cucumber.CucumberExpressions": "17.1.0",
-          "Cucumber.HtmlFormatter": "22.2.0",
-          "Cucumber.Messages": "30.1.0",
-          "Gherkin": "35.0.0",
-          "Microsoft.Bcl.AsyncInterfaces": "9.0.6",
-          "Microsoft.Extensions.DependencyModel": "8.0.2"
         }
       }
     }

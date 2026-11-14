@@ -106,7 +106,20 @@ dotnet test tests/Storks.OpenTelemetry.Reqnroll.Tests --no-build
 
 ### Dependencies
 
-- All package versions live in one file, `Directory.Packages.props` (Central Package Management). Do not put `Version` on a `PackageReference` in a csproj. Versions shared by a package family are properties there; the Reqnroll version is `ReqnrollVersion`, and `-p:ReqnrollVersion=3.x.y` builds against another Reqnroll (the lock files record the default version, so add `-p:RestoreLockedMode=false` and do not commit the lock files that restore rewrites).
+- All package versions live in one file, `Directory.Packages.props` (Central Package Management). Do not put `Version` on a `PackageReference` in a csproj. Versions shared by a package family are properties there.
+- Reqnroll has two properties in `Directory.Packages.props`:
+  - `ReqnrollMinVersion` (3.0.0) is the oldest Reqnroll the plugin is verified on. The package depends on `[ReqnrollMinVersion, 4.0)` and the plugin compiles against that lower bound. Reqnroll 4.x is excluded until it is verified.
+  - `ReqnrollVersion` is the concrete Reqnroll that the unit tests and the samples run on (they set `VersionOverride="$(ReqnrollVersion)"`). Pass `-p:ReqnrollVersion=3.x.y` to test against another Reqnroll. The lock files record the default version, so also pass `-p:RestoreLockedMode=false`, and do not commit the lock files that restore rewrites.
+- The compatibility matrix runs the unit tests on the minimum and on the latest Reqnroll 3.x:
+
+```sh
+# minimum supported Reqnroll
+dotnet test tests/Storks.OpenTelemetry.Reqnroll.Tests -p:ReqnrollVersion=3.0.0 -p:RestoreLockedMode=false
+# latest Reqnroll 3.x (floating version)
+dotnet test tests/Storks.OpenTelemetry.Reqnroll.Tests "-p:ReqnrollVersion=3.*" -p:CentralPackageFloatingVersionsEnabled=true -p:RestoreLockedMode=false
+```
+
+- If the plugin starts to need a newer Reqnroll, raise `ReqnrollMinVersion` and the version in the minimum command together, so the declared range stays true.
 - `global.json` pins the .NET SDK and the `Aspire.AppHost.Sdk` MSBuild SDK. MSBuild resolves SDKs before reading properties, so when you update Aspire, change `AspireVersion` in `Directory.Packages.props` and `Aspire.AppHost.Sdk` in `global.json` together.
 - Restore uses NuGet lock files (`packages.lock.json`, one per project). When the environment variable `CI` is `true` (as on GitHub Actions), restore runs in locked mode and fails if a lock file is out of date. After adding or updating a dependency, run `dotnet restore Storks.OpenTelemetry.Reqnroll.slnx` and commit the updated lock files. To check them the way CI does:
 
