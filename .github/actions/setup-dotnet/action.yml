@@ -1,0 +1,21 @@
+name: Setup .NET
+description: Installs the .NET SDK pinned in global.json and, optionally, caches the NuGet global packages folder.
+
+inputs:
+  cache:
+    description: >
+      Cache the NuGet global packages folder, keyed by the OS and all committed packages.lock.json files.
+      Turn it off in jobs whose restore does not match the lock files (e.g. another Reqnroll version)
+      and in release builds (no cache poisoning of what gets published).
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Install .NET SDK from global.json
+      uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+      with:
+        global-json-file: global.json
+        cache: ${{ inputs.cache == 'true' }}
+        cache-dependency-path: "**/packages.lock.json"

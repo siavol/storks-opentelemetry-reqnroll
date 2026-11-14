@@ -1,0 +1,99 @@
+# Reusable build: called by ci.yml (every PR and push to main) and by release.yml (tags).
+# On ubuntu and windows: locked restore -> format check -> build with warnings as errors -> unit tests with coverage.
+# On ubuntu only: pack; the nupkg and snupkg are uploaded as the artifact named by the `package-artifact` output,
+# and the unit-test coverage as the `coverage-artifact` output.
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      package-artifact:
+        description: Name of the artifact with the packed nupkg and snupkg.
+        type: string
+        default: packages
+      coverage-artifact:
+        description: Name of the artifact with the unit-test coverage (Visual Studio XML and Cobertura).
+        type: string
+        default: coverage
+      nuget-cache:
+        description: Cache NuGet packages between runs. Release builds turn it off.
+        type: boolean
+        default: true
+    outputs:
+      package-artifact:
+        description: Name of the artifact with the packed nupkg and snupkg (from ubuntu).
+        value: ${{ inputs.package-artifact }}
+      coverage-artifact:
+        description: Name of the artifact with the unit-test coverage (from ubuntu).
+        value: ${{ inputs.coverage-artifact }}
+
+permissions: {}
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            pack: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # MinVer computes the package version from the tags and the commit height.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+        with:
+          cache: ${{ inputs.nuget-cache }}
+
+      - name: Restore (locked)
+        run: dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
+
+      - name: Check formatting
+        run: dotnet format Storks.OpenTelemetry.Reqnroll.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build Storks.OpenTelemetry.Reqnroll.slnx -warnaserror --no-restore
+
+      - name: Unit tests with coverage
+        run: >
+          dotnet test tests/Storks.OpenTelemetry.Reqnroll.Tests --no-build
+          --collect "Code Coverage;Format=cobertura,xml"
+          --results-directory artifacts/coverage
+
+      - name: Upload coverage
+        if: matrix.pack
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.coverage-artifact }}
+          path: artifacts/coverage/**/*.xml
+          if-no-files-found: error
+
+      - name: Pack
+        if: matrix.pack
+        # pack builds the Release configuration (the steps above build Debug), hence no --no-build.
+        run: dotnet pack src/Storks.OpenTelemetry.Reqnroll -o artifacts/packages --no-restore -warnaserror
+
+      - name: Upload packages
+        if: matrix.pack
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.package-artifact }}
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+          if-no-files-found: error

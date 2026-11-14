@@ -25,7 +25,7 @@ internal sealed class WindowOverlap : IWindowOverlap
     /// README section that explains the limitation. An absolute URL, because the warning is read in the test output of a
     /// package user, where a relative README path leads nowhere.
     /// </summary>
-    internal const string ReadmeSection = "https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap";
+    internal const string ReadmeSection = "https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap";
 
     private readonly object _gate = new();
     private readonly List<ScenarioRun> _open = [];

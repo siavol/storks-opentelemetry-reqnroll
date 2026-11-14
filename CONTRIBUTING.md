@@ -150,7 +150,12 @@ dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
 - Keep a PR to one change, and link the issue it addresses.
 - Cover behavior changes with tests: unit tests for the package, the report checks for anything visible in the report.
 - Use the terms from [GLOSSARY.md](GLOSSARY.md) in code, tests and docs; add a term there if you introduce one.
-- CI runs on every PR, including PRs from forks: build on ubuntu and windows, unit tests, compatibility with the minimum and latest Reqnroll 3.x, the Aspire sample E2E and workflow linters. SonarCloud is skipped for forks.
+- CI (`.github/workflows/ci.yml`) runs on every PR, including PRs from forks, and on every push to `main`. Its jobs:
+  - **Lint workflows:** `actionlint`, then `zizmor`, over `.github/`.
+  - **Build** (`build.yml`, on ubuntu and windows): locked restore, `dotnet format --verify-no-changes`, build with warnings as errors, unit tests with coverage; on ubuntu also `dotnet pack`, uploaded as the `packages` artifact.
+  - **E2E** (`e2e.yml`, ubuntu): the Aspire sample in local package mode on that nupkg, then the report checks. The run must end with exactly the `@demo-failure` scenario red; any other failure fails the job.
+  - **Reqnroll 3.0.0 / 3.\***: the unit tests on the minimum and on the latest Reqnroll 3.x (see [Dependencies](#dependencies)).
+  - A newer push to a PR cancels its outdated run.
 
 Bugs and feature requests go through the issue templates. Security vulnerabilities go through private reporting, see [SECURITY.md](SECURITY.md).
 

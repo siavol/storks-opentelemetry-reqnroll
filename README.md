@@ -2,7 +2,7 @@
 
 A Reqnroll plugin that receives your application's OpenTelemetry traces and logs during `dotnet test` and shows them by scenario and step in a Telemetry Viewer linked from the Reqnroll report.
 
-![Telemetry Viewer: a failed scenario with the span waterfall of its first step and the step's logs, including the error logged by the pricing service](https://raw.githubusercontent.com/OWNER/storks-opentelemetry-reqnroll/main/docs/images/telemetry-viewer.png)
+![Telemetry Viewer: a failed scenario with the span waterfall of its first step and the step's logs, including the error logged by the pricing service](https://raw.githubusercontent.com/siavol/storks-opentelemetry-reqnroll/main/docs/images/telemetry-viewer.png)
 
 ## Why
 
@@ -91,7 +91,7 @@ Open `reqnroll_report.html` and follow **Open telemetry** on a step, or open `te
 ## How it works
 
 <!-- Generated from docs/images/how-it-works.mmd, see CONTRIBUTING.md. A PNG, because nuget.org renders no Mermaid. -->
-![The SUT sends traces and logs over OTLP/HTTP to the plugin's receiver inside the test process; the plugin takes scenario and step start and end from the Reqnroll scenarios and, at the end of the run, writes telemetry.html, traces.jsonl and logs.jsonl to the reports folder, where the Open telemetry links of reqnroll_report.html lead](https://raw.githubusercontent.com/OWNER/storks-opentelemetry-reqnroll/main/docs/images/how-it-works.png)
+![The SUT sends traces and logs over OTLP/HTTP to the plugin's receiver inside the test process; the plugin takes scenario and step start and end from the Reqnroll scenarios and, at the end of the run, writes telemetry.html, traces.jsonl and logs.jsonl to the reports folder, where the Open telemetry links of reqnroll_report.html lead](https://raw.githubusercontent.com/siavol/storks-opentelemetry-reqnroll/main/docs/images/how-it-works.png)
 
 1. **Receiver.** When the test run starts, the plugin starts an OTLP/HTTP (protobuf) receiver inside the test process, on a random port of `127.0.0.1`. It accepts traces and logs; metrics are accepted and dropped.
 2. **Exporter settings.** `ITelemetryEndpoint.GetExporterEnvironment()` returns the variables that send the SUT's OTLP exporter there:
@@ -136,7 +136,7 @@ Attribution goes by time only. When scenarios run in parallel, the Observation W
 The plugin warns about it. The test output of a scenario gets a line like:
 
 ```text
-[Storks.OpenTelemetry] Window Overlap: scenario 'Pricing: Apply discount' started while 'Checkout: Pay by card' was still running, so telemetry in the overlap shows up in each of the overlapping scenarios. See https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap
+[Storks.OpenTelemetry] Window Overlap: scenario 'Pricing: Apply discount' started while 'Checkout: Pay by card' was still running, so telemetry in the overlap shows up in each of the overlapping scenarios. See https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap
 ```
 
 and the end of the run writes one summary line with the number of overlaps to the console of the test process (with `dotnet test`, at detailed verbosity, see [How it works](#how-it-works)). In a parallel run the warning can land in the output of a neighbouring scenario; both scenario names are in the text. Sequential runs print nothing.
@@ -153,12 +153,12 @@ Telemetry is attributed by its own timestamps at the end of the run, so a span t
 
 ## Samples
 
-- [`samples/Aspire`](https://github.com/OWNER/storks-opentelemetry-reqnroll/tree/main/samples/Aspire): two ASP.NET Core services and Postgres started with `Aspire.Hosting.Testing`, Reqnroll scenarios on NUnit, and one scenario (`@demo-failure`) that fails on purpose. The screenshot above is from it. How to run it is in [CONTRIBUTING.md](https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/CONTRIBUTING.md#the-aspire-sample).
+- [`samples/Aspire`](https://github.com/siavol/storks-opentelemetry-reqnroll/tree/main/samples/Aspire): two ASP.NET Core services and Postgres started with `Aspire.Hosting.Testing`, Reqnroll scenarios on NUnit, and one scenario (`@demo-failure`) that fails on purpose. The screenshot above is from it. How to run it is in [CONTRIBUTING.md](https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/CONTRIBUTING.md#the-aspire-sample).
 
 Planned: a SUT in Docker, an in-process SUT, Allure reports, and Attribution by trace context. The roadmap will be in GitHub Issues.
 
 ## Contributing and license
 
-Build, test and PR instructions are in [CONTRIBUTING.md](https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/CONTRIBUTING.md). Terms such as Observation Window and Attribution are defined in [GLOSSARY.md](https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/GLOSSARY.md). To report a vulnerability, see [SECURITY.md](https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/SECURITY.md).
+Build, test and PR instructions are in [CONTRIBUTING.md](https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/CONTRIBUTING.md). Terms such as Observation Window and Attribution are defined in [GLOSSARY.md](https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/GLOSSARY.md). To report a vulnerability, see [SECURITY.md](https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/SECURITY.md).
 
-Licensed under the [MIT License](https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/LICENSE).
+Licensed under the [MIT License](https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/LICENSE).
