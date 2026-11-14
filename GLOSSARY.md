@@ -24,6 +24,14 @@ _Avoid_: correlation, matching, binding
 Интервал времени сценария или шага; телеметрия, начавшаяся в этом интервале, относится к нему.
 _Avoid_: time range, timeframe, slot
 
+**Step Slice**:
+Часть Scenario Telemetry, начавшаяся в Observation Window одного шага сценария.
+_Avoid_: step telemetry, телеметрия шага
+
+**Telemetry Viewer**:
+Страница, на которой смотрят телеметрию прогона: по сценариям и шагам, трейсы и логи вместе на временной шкале.
+_Avoid_: dashboard, отчёт телеметрии
+
 **Unattributed Telemetry**:
 Телеметрия SUT, которую не удалось отнести ни к одному сценарию.
 _Avoid_: orphan spans, шум
