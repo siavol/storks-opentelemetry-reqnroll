@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using Google.Protobuf;
 using NUnit.Framework;
 using OpenTelemetry.Proto.Collector.Logs.V1;
@@ -94,5 +95,55 @@ public class OtlpReceiverTests
         Assert.That(mapped.End, Is.EqualTo(when.AddMilliseconds(40)));
         Assert.That(mapped.Status, Is.EqualTo(SpanStatus.Error));
         Assert.That(mapped.Attributes["http.response.status_code"], Is.EqualTo("500"));
+    }
+    [Test]
+    [NonParallelizable] // sets process-wide environment variables
+    public async Task Ambient_kestrel_and_url_configuration_does_not_widen_the_receiver_beyond_loopback()
+    {
+        var endpointPort = FreePort();
+        var urlsPort = FreePort();
+        var httpPort = FreePort();
+        var ambient = new Dictionary<string, string>
+        {
+            ["Kestrel__Endpoints__Http__Url"] = $"http://0.0.0.0:{endpointPort}",
+            ["ASPNETCORE_Kestrel__Endpoints__Http__Url"] = $"http://0.0.0.0:{endpointPort}",
+            ["ASPNETCORE_URLS"] = $"http://0.0.0.0:{urlsPort}",
+            ["ASPNETCORE_HTTP_PORTS"] = httpPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        };
+        var saved = ambient.Keys.ToDictionary(k => k, Environment.GetEnvironmentVariable);
+        try
+        {
+            foreach (var (key, value) in ambient) Environment.SetEnvironmentVariable(key, value);
+            await using var receiver = new OtlpReceiver(new TelemetryStore());
+            await receiver.StartAsync();
+
+            Assert.That(receiver.Endpoint.IsLoopback, Is.True, receiver.Endpoint.ToString());
+            using var http = new HttpClient();
+            var response = await http.PostAsync(new Uri(receiver.Endpoint, "v1/metrics"), new ByteArrayContent([]));
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            foreach (var port in new[] { endpointPort, urlsPort, httpPort })
+                Assert.That(CanBindAnyAddress(port), Is.True, $"port {port} from the ambient configuration is bound by the receiver");
+        }
+        finally
+        {
+            foreach (var (key, value) in saved) Environment.SetEnvironmentVariable(key, value);
+        }
+    }
+
+    private static int FreePort()
+    {
+        var listener = new TcpListener(IPAddress.Any, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
+    }
+
+    private static bool CanBindAnyAddress(int port)
+    {
+        var listener = new TcpListener(IPAddress.Any, port);
+        try { listener.Start(); return true; }
+        catch (SocketException) { return false; }
+        finally { listener.Stop(); }
     }
 }

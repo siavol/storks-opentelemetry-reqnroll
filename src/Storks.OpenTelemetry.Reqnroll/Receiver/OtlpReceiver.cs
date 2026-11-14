@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using OpenTelemetry.Proto.Collector.Logs.V1;
 using OpenTelemetry.Proto.Collector.Trace.V1;
 
@@ -76,9 +75,13 @@ internal sealed class OtlpReceiver : IAsyncDisposable
 
     public async Task StartAsync()
     {
-        var builder = WebApplication.CreateSlimBuilder();
-        builder.Logging.ClearProviders();
+        // The empty builder reads no configuration (environment variables, appsettings.json, command line), so ambient
+        // Kestrel endpoints, ASPNETCORE_URLS or ASPNETCORE_HTTP_PORTS of the test process cannot add listeners:
+        // the receiver only ever listens on its own loopback port.
+        var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
+        builder.WebHost.UseKestrelCore();
         builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Loopback, 0));
+        builder.Services.AddRoutingCore();
         var app = builder.Build();
 
         app.MapPost("/v1/logs", ctx => Handle(ctx.Request, "/v1/logs", ExportLogsServiceRequest.Parser,
