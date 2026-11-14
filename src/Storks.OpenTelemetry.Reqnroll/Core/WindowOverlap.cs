@@ -2,8 +2,8 @@ namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>
 /// Notices Window Overlap: the Observation Window of a scenario opening while the window of another scenario is still
-/// open (scenarios run in parallel). Attribution goes by time only, so telemetry in the overlap may be attributed to the
-/// wrong scenario; this only warns and never changes Attribution. Thread-safe: parallel scenarios open and close their
+/// open (scenarios run in parallel). Attribution goes by time only and checks each window on its own, so telemetry in the
+/// overlap shows up in each of the overlapping scenarios; this only warns and never changes Attribution. Thread-safe: parallel scenarios open and close their
 /// windows on their own threads.
 /// </summary>
 internal interface IWindowOverlap
@@ -21,8 +21,11 @@ internal interface IWindowOverlap
 /// <inheritdoc cref="IWindowOverlap"/>
 internal sealed class WindowOverlap : IWindowOverlap
 {
-    /// <summary>README section that explains the limitation (ticket 09 creates the heading).</summary>
-    internal const string ReadmeSection = "README.md#window-overlap";
+    /// <summary>
+    /// README section that explains the limitation. An absolute URL, because the warning is read in the test output of a
+    /// package user, where a relative README path leads nowhere.
+    /// </summary>
+    internal const string ReadmeSection = "https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap";
 
     private readonly object _gate = new();
     private readonly List<ScenarioRun> _open = [];
@@ -39,8 +42,8 @@ internal sealed class WindowOverlap : IWindowOverlap
         }
         if (others.Length == 0) return null;
         return $"Window Overlap: scenario {Title(run)} started while {string.Join(", ", others.Select(Title))} "
-            + $"{(others.Length == 1 ? "was" : "were")} still running, so telemetry in the overlap may be attributed to the wrong scenario. "
-            + $"See the Window Overlap section of the package README ({ReadmeSection}).";
+            + $"{(others.Length == 1 ? "was" : "were")} still running, so telemetry in the overlap shows up in each of the overlapping scenarios. "
+            + $"See {ReadmeSection}";
     }
 
     public void Closed(ScenarioRun run)
@@ -54,7 +57,7 @@ internal sealed class WindowOverlap : IWindowOverlap
         lock (_gate) count = _count;
         return count == 0 ? null
             : $"Window Overlap: {count} scenario {(count == 1 ? "window" : "windows")} opened while another was open; "
-              + $"Attribution of telemetry in overlaps may be wrong ({ReadmeSection}).";
+              + $"telemetry in an overlap shows up in each of the overlapping scenarios. See {ReadmeSection}";
     }
 
     private static string Title(ScenarioRun run) => $"'{run.Feature}: {run.Name}'";

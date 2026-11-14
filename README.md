@@ -144,7 +144,7 @@ Attribution goes by time only. When scenarios run in parallel, the Observation W
 The plugin warns about it. The test output of a scenario gets a line like:
 
 ```text
-[Storks.OpenTelemetry] Window Overlap: scenario 'Pricing: Apply discount' started while 'Checkout: Pay by card' was still running, so telemetry in the overlap may be attributed to the wrong scenario. See the Window Overlap section of the package README (README.md#window-overlap).
+[Storks.OpenTelemetry] Window Overlap: scenario 'Pricing: Apply discount' started while 'Checkout: Pay by card' was still running, so telemetry in the overlap shows up in each of the overlapping scenarios. See https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap
 ```
 
 and the end of the run prints one summary line with the number of overlaps. In a parallel run the warning can land in the output of a neighbouring scenario; both scenario names are in the text. Sequential runs print nothing.

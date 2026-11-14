@@ -6,6 +6,9 @@ public class RunTrackerTests
 {
     private static readonly DateTimeOffset T0 = new(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);
 
+    /// <summary>The README section on the repository, reachable from a package user's test output.</summary>
+    private const string WindowOverlapSection = "https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap";
+
     private sealed class FakeLinkWriter(bool fail = false) : ILinkWriter
     {
         public List<string> Links { get; } = [];
@@ -95,7 +98,8 @@ public class RunTrackerTests
         Assert.That(warning, Does.Contain("Window Overlap")
             .And.Contain("'Pricing: Apply discount'")
             .And.Contain("'Checkout: Pay by card'")
-            .And.Contain("README.md#window-overlap"));
+            .And.Contain("shows up in each of the overlapping scenarios")
+            .And.Contain(WindowOverlapSection));
         Assert.That(pricing.Start, Is.EqualTo(T0.AddMilliseconds(10)), "the window is opened as before");
     }
 
@@ -138,6 +142,8 @@ public class RunTrackerTests
         tracker.WindowOpened(d, T0.AddMilliseconds(6));   // alone
 
         Assert.That(diagnostics.Drain(), Has.Count.EqualTo(2));
-        Assert.That(tracker.WindowOverlapSummary(), Does.Contain("Window Overlap: 2 scenario windows").And.Contain("README.md#window-overlap"));
+        Assert.That(tracker.WindowOverlapSummary(), Does.Contain("Window Overlap: 2 scenario windows")
+            .And.Contain("shows up in each of the overlapping scenarios")
+            .And.Contain(WindowOverlapSection));
     }
 }
