@@ -86,7 +86,7 @@ internal sealed class ScenarioRun
 /// </summary>
 internal sealed class RunRecord(DateTimeOffset start)
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly List<ScenarioRun> _runs = [];
     private readonly List<HookRun> _runHooks = [];
 

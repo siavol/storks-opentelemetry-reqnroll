@@ -38,7 +38,7 @@ public class ViewerIndexReportTests
     private static string? Attribute(JsonNode span, string key)
     {
         var value = span["attributes"]?.AsArray().FirstOrDefault(a => (string?)a!["key"] == key)?["value"];
-        return value is null ? null : (string?)(value["intValue"] ?? value["stringValue"])?.ToString();
+        return value is null ? null : (value["intValue"] ?? value["stringValue"])?.ToString();
     }
 
     /// <summary>The index entry of the When step of the scenario, found through its link in the Reqnroll report.</summary>

@@ -96,7 +96,7 @@ select { font: inherit; font-size: 12px; color: var(--fg); background: var(--bg)
 .ltick.TRC, .ltick.DBG { opacity: .5; }
 .ltick.WRN { background: var(--warn); opacity: 1; } .ltick.ERR, .ltick.FTL { background: var(--fail); opacity: 1; }
 .ltick.dim { opacity: .2; }
-.ltick.hot { background: var(--hot) !important; opacity: 1; top: 0; height: 26px; width: 5px; margin-left: -2px; z-index: 4; box-shadow: 0 0 0 2px var(--bg), 0 0 8px var(--hot); }
+.ltick.hot { background: var(--hot); opacity: 1; top: 0; height: 26px; width: 5px; margin-left: -2px; z-index: 4; box-shadow: 0 0 0 2px var(--bg), 0 0 8px var(--hot); }
 .cursor { position: absolute; top: 0; bottom: 0; border-left: 2px solid var(--hot); z-index: 4; pointer-events: none; }
 .errbox { border: 1px solid var(--fail); background: var(--fail-bg); border-radius: 4px; padding: 8px 10px; }
 .errbox b { color: var(--fail); }
@@ -143,7 +143,7 @@ table.logs tr.WRN td { background: var(--warn-bg); } table.logs tr.ERR td, table
 table.logs tr.sel td { outline: 1px solid var(--accent); }
 table.logs .t { white-space: nowrap; color: var(--fg2); width: 1%; }
 table.logs .src { white-space: nowrap; color: var(--fg3); width: 1%; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
-table.logs .msg { white-space: pre-wrap; word-break: break-word; }
+table.logs .msg { white-space: pre-wrap; overflow-wrap: anywhere; }
 table.logs .msg .more { color: var(--fg3); }
 .lvl { font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 3px; background: var(--bg3); color: var(--fg2); }
 .lvl.WRN { background: var(--warn); color: #fff; } .lvl.ERR, .lvl.FTL { background: var(--fail); color: #fff; }
@@ -162,7 +162,7 @@ table.logs .msg .more { color: var(--fg3); }
 #detail table { width: calc(100% - 28px); margin: 0 14px; border-collapse: collapse; }
 #detail td { padding: 3px 0; vertical-align: top; border-bottom: 1px solid var(--line); word-break: break-all; }
 #detail td:first-child { color: var(--fg2); width: 42%; padding-right: 8px; word-break: normal; overflow-wrap: anywhere; }
-#detail pre { margin: 0 14px; padding: 8px; background: var(--bg2); border-radius: 4px; white-space: pre-wrap; word-break: break-word; }
+#detail pre { margin: 0 14px; padding: 8px; background: var(--bg2); border-radius: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
 #detail .none { margin: 0 14px; color: var(--fg3); }
 #detail .link { margin: 4px 14px; }
 #detail .ev { margin: 0 14px; }
@@ -285,7 +285,7 @@ function readHash() {
   const p = new URLSearchParams(location.hash.replace(/^#/, ""));
   const s = p.get("s");
   const fallback = (scenarios.find((x) => x.s.status === "failed") || scenarios[0]);
-  const step = parseInt(p.get("step"), 10);
+  const step = Number.parseInt(p.get("step"), 10);
   return {
     view: s === UNATTRIBUTED || byId.has(s) ? s : fallback ? fallback.s.id : UNATTRIBUTED,
     step: byId.has(s) && Number.isFinite(step) ? step : null,
@@ -758,7 +758,7 @@ function linkTo(text, spanId) {
   div.append(a);
   return div;
 }
-const scopeTable = (scope) => kvTable(Object.assign({ name: scope.name, version: scope.version || "—" }, attrs(scope.attributes)));
+const scopeTable = (scope) => kvTable({ name: scope.name, version: scope.version || "—", ...attrs(scope.attributes) });
 function attributedTo(w) {
   if (w && w.st) return "step " + w.st.number + ": " + w.st.keyword + " " + w.st.text;
   if (w && w.h) return "hook " + w.h.hookType + ": " + w.h.name;
@@ -805,7 +805,7 @@ function renderDetail() {
     } else box.append(el("div", "none", "none"));
     if ((s.raw.links || []).length) {
       box.append(h3("Links"));
-      for (const k of s.raw.links) box.append(kvTable(Object.assign({ traceId: k.traceId, spanId: k.spanId }, attrs(k.attributes))));
+      for (const k of s.raw.links) box.append(kvTable({ traceId: k.traceId, spanId: k.spanId, ...attrs(k.attributes) }));
     }
     box.append(h3("Resource"), kvTable(s.resource), h3("Scope"), scopeTable(s.scope));
   } else {

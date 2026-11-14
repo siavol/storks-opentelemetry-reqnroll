@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Reqnroll;
 
@@ -28,6 +29,8 @@ internal static class ReqnrollScenario
     /// non-public (<c>FeatureInfo.FeatureCucumberMessages.Source.Uri</c>), so this goes by reflection and falls back to
     /// the feature folder; nothing here may fail the scenario.
     /// </summary>
+    [SuppressMessage("Major Code Smell", "S3011:Reflection should not be used to increase accessibility of classes, methods, or fields",
+        Justification = "Reqnroll exposes the feature file path only through non-public members; read-only, and any failure falls back to the folder.")]
     private static string? FeatureUri(FeatureInfo feature)
     {
         try
@@ -48,8 +51,11 @@ internal static class ReqnrollScenario
     }
 
     /// <summary>Message and stack trace of a step error, as the report shows it.</summary>
-    public static string? ErrorText(Exception? error) =>
-        error is null ? null : string.IsNullOrEmpty(error.StackTrace) ? error.Message : error.Message + "\n\n" + error.StackTrace;
+    public static string? ErrorText(Exception? error)
+    {
+        if (error is null) return null;
+        return string.IsNullOrEmpty(error.StackTrace) ? error.Message : error.Message + "\n\n" + error.StackTrace;
+    }
 
     public static string Status(ScenarioExecutionStatus status) => status switch
     {

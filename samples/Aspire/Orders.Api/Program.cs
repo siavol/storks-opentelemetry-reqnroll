@@ -36,4 +36,4 @@ app.MapPost("/orders", async (CreateOrderRequest request, PricingClient pricing,
 app.MapGet("/orders/{id:guid}", async (Guid id, OrdersDbContext db) =>
     await db.Orders.FindAsync(id) is { } order ? Results.Ok(OrderResponse.From(order)) : Results.NotFound());
 
-app.Run();
+await app.RunAsync();

@@ -14,7 +14,7 @@ internal sealed record TelemetrySnapshot(
 /// </summary>
 internal sealed class TelemetryStore
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly List<TelemetryLog> _logs = [];
     private readonly List<TelemetrySpan> _spans = [];
     private readonly List<ExportLogsServiceRequest> _logRequests = [];

@@ -10,4 +10,4 @@ builder.AddProject<Projects.Orders_Api>("orders-api")
     .WithReference(ordersDb)
     .WaitFor(ordersDb);
 
-builder.Build().Run();
+await builder.Build().RunAsync();

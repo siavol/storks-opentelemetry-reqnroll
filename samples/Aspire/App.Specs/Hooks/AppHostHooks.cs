@@ -49,7 +49,10 @@ public static class AppHostHooks
                 using var response = await client.GetAsync($"/orders/{Guid.NewGuid()}");
                 if ((int)response.StatusCode < 500) break;
             }
-            catch (HttpRequestException) { }
+            catch (HttpRequestException)
+            {
+                // not listening yet: retry until the deadline
+            }
             if (DateTimeOffset.UtcNow >= deadline) throw new TimeoutException("orders-api did not answer the warm-up request");
             await Task.Delay(500);
         }

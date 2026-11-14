@@ -51,7 +51,7 @@ public sealed class CucumberMessages
         var startedIds = Of("testCaseStarted").Where(s => (string?)s["testCaseId"] == (string)testCase["id"]!).Select(s => (string)s["id"]!).ToHashSet();
 
         return Of("attachment")
-            .Where(a => (string?)a["mediaType"] == "text/x.cucumber.log+plain" && a["testCaseStartedId"] is { } id && startedIds.Contains((string)id!))
+            .Where(a => (string?)a["mediaType"] == "text/x.cucumber.log+plain" && a["testCaseStartedId"]?.GetValue<string>() is { } id && startedIds.Contains(id))
             .Select(a => (Message: a, Href: Regex.Match((string)a["body"]!, "<a\\s+href=\"(telemetry\\.html#[^\"]*)\"")))
             .Where(x => x.Href.Success)
             .Select(x =>

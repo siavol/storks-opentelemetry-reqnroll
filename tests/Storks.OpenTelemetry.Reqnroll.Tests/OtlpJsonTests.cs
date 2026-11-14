@@ -175,7 +175,7 @@ public class OtlpJsonTests
         // A regular file where the report directory should be makes every write fail.
         var blocker = TempDir();
         Directory.CreateDirectory(Path.GetDirectoryName(blocker)!);
-        File.WriteAllText(blocker, "x");
+        await File.WriteAllTextAsync(blocker, "x");
         var old = Environment.GetEnvironmentVariable(ReportDirectory.Variable);
         Environment.SetEnvironmentVariable(ReportDirectory.Variable, blocker);
         try

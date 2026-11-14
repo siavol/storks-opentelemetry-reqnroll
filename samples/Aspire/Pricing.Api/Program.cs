@@ -17,6 +17,4 @@ app.MapGet("/prices/{sku}", (string sku, ILogger<Program> logger) =>
     return Results.Ok(new PriceResponse(sku, 25.00m));
 });
 
-app.Run();
-
-public partial class Program;
+await app.RunAsync();

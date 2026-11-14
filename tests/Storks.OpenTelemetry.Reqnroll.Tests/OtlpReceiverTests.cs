@@ -56,7 +56,7 @@ public class OtlpReceiverTests
         await receiver.StartAsync();
 
         var when = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
-        ulong Nanos(DateTimeOffset t) => (ulong)(t.ToUnixTimeMilliseconds() * 1_000_000);
+        static ulong Nanos(DateTimeOffset t) => (ulong)(t.ToUnixTimeMilliseconds() * 1_000_000);
         var resource = new ResourceSpans { Resource = new Resource() };
         resource.Resource.Attributes.Add(new KeyValue { Key = "service.name", Value = new AnyValue { StringValue = "pricing-api" } });
         var scope = new ScopeSpans();

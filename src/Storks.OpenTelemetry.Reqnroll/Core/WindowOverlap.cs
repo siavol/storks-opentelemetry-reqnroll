@@ -27,7 +27,7 @@ internal sealed class WindowOverlap : IWindowOverlap
     /// </summary>
     internal const string ReadmeSection = "https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap";
 
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly List<ScenarioRun> _open = [];
     private int _count;
 
@@ -55,9 +55,9 @@ internal sealed class WindowOverlap : IWindowOverlap
     {
         int count;
         lock (_gate) count = _count;
-        return count == 0 ? null
-            : $"Window Overlap: {count} scenario {(count == 1 ? "window" : "windows")} opened while another was open; "
-              + $"telemetry in an overlap shows up in each of the overlapping scenarios. See {ReadmeSection}";
+        if (count == 0) return null;
+        return $"Window Overlap: {count} scenario {(count == 1 ? "window" : "windows")} opened while another was open; "
+            + $"telemetry in an overlap shows up in each of the overlapping scenarios. See {ReadmeSection}";
     }
 
     private static string Title(ScenarioRun run) => $"'{run.Feature}: {run.Name}'";

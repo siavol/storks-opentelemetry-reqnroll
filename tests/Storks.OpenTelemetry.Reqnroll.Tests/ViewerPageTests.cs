@@ -31,8 +31,8 @@ public class ViewerPageTests
         var scope = new ScopeSpans { Scope = new InstrumentationScope { Name = "Pricing.Scope" } };
         scope.Spans.Add(new Span
         {
-            TraceId = ByteString.CopyFrom(new byte[16] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }),
-            SpanId = ByteString.CopyFrom(new byte[8] { 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8 }),
+            TraceId = ByteString.CopyFrom(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
+            SpanId = ByteString.CopyFrom(0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8),
             Name = spanName,
             StartTimeUnixNano = 1_794_650_400_001_000_000UL,
             EndTimeUnixNano = 1_794_650_400_002_000_000UL,
@@ -56,7 +56,7 @@ public class ViewerPageTests
                 SeverityNumber = SeverityNumber.Warn,
                 SeverityText = "Warning",
                 Body = new AnyValue { StringValue = body },
-                SpanId = ByteString.CopyFrom(new byte[8] { 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8 }),
+                SpanId = ByteString.CopyFrom(0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8),
             });
         }
         resource.ScopeLogs.Add(scope);

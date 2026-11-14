@@ -1,3 +1,4 @@
+using System.Net;
 using Google.Protobuf;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -77,7 +78,7 @@ internal sealed class OtlpReceiver : IAsyncDisposable
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.ClearProviders();
-        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Loopback, 0));
         var app = builder.Build();
 
         app.MapPost("/v1/logs", ctx => Handle(ctx.Request, "/v1/logs", ExportLogsServiceRequest.Parser,
@@ -88,7 +89,7 @@ internal sealed class OtlpReceiver : IAsyncDisposable
 
         await app.StartAsync();
         var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
-        Endpoint = new Uri(address.EndsWith('/') ? address : address + "/");
+        Endpoint = new Uri(address); // the root path: "http://127.0.0.1:<port>/"
         _app = app;
     }
 
