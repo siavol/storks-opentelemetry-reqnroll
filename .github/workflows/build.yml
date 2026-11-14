@@ -7,14 +7,6 @@ name: Build
 on:
   workflow_call:
     inputs:
-      package-artifact:
-        description: Name of the artifact with the packed nupkg and snupkg.
-        type: string
-        default: packages
-      coverage-artifact:
-        description: Name of the artifact with the unit-test coverage (Visual Studio XML and Cobertura).
-        type: string
-        default: coverage
       nuget-cache:
         description: Cache NuGet packages between runs. Release builds turn it off.
         type: boolean
@@ -22,10 +14,10 @@ on:
     outputs:
       package-artifact:
         description: Name of the artifact with the packed nupkg and snupkg (from ubuntu).
-        value: ${{ inputs.package-artifact }}
+        value: ${{ jobs.build.outputs.package-artifact }}
       coverage-artifact:
-        description: Name of the artifact with the unit-test coverage (from ubuntu).
-        value: ${{ inputs.coverage-artifact }}
+        description: Name of the artifact with the unit-test coverage, Visual Studio XML and Cobertura (from ubuntu).
+        value: ${{ jobs.build.outputs.coverage-artifact }}
 
 permissions: {}
 
@@ -33,6 +25,9 @@ env:
   DOTNET_NOLOGO: "true"
   DOTNET_CLI_TELEMETRY_OPTOUT: "true"
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+  # The artifact names, defined here only; callers take them from the outputs.
+  PACKAGE_ARTIFACT: packages
+  COVERAGE_ARTIFACT: coverage
 
 jobs:
   build:
@@ -40,6 +35,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
+    outputs:
+      package-artifact: ${{ env.PACKAGE_ARTIFACT }}
+      coverage-artifact: ${{ env.COVERAGE_ARTIFACT }}
     strategy:
       fail-fast: false
       matrix:
@@ -91,7 +89,7 @@ jobs:
         if: matrix.pack
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ inputs.coverage-artifact }}
+          name: ${{ env.COVERAGE_ARTIFACT }}
           path: artifacts/coverage/**/*.xml
           if-no-files-found: error
 
@@ -104,7 +102,7 @@ jobs:
         if: matrix.pack
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ inputs.package-artifact }}
+          name: ${{ env.PACKAGE_ARTIFACT }}
           path: |
             artifacts/packages/*.nupkg
             artifacts/packages/*.snupkg

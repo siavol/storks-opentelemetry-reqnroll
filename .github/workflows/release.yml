@@ -1,6 +1,6 @@
 # Release on a pushed tag vX.Y.Z (or a prerelease tag such as v0.1.0-rc.1). Jobs:
 #   build           build.yml without the NuGet cache; MinVer takes the version from the tag
-#   version         the packed version equals the tag, otherwise nothing is published
+#   version         the tagged commit is on main and the packed version equals the tag, otherwise nothing is published
 #   e2e             e2e.yml on the packed nupkg
 #   publish         environment `nuget` (tags v* only, waits for a maintainer's approval): Trusted Publishing login,
 #                   then push of exactly the nupkg and snupkg that passed E2E; nothing is rebuilt
@@ -37,10 +37,28 @@ jobs:
     name: Version matches the tag
     needs: build
     runs-on: ubuntu-latest
-    permissions: {}
+    permissions:
+      contents: read # checkout of main for the ancestry check
     outputs:
       version: ${{ steps.check.outputs.version }}
     steps:
+      # Releases come from main only: a v* tag on a branch or a fork-merged commit is not published.
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the tag is on main
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" HEAD; then
+            echo "::error::The tag $TAG ($GITHUB_SHA) is not on main; tag a commit of origin/main"
+            exit 1
+          fi
+
       - name: Download packages
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:

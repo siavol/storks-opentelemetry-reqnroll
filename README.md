@@ -1,5 +1,6 @@
 # Storks.OpenTelemetry.Reqnroll
 
+[![CI](https://github.com/siavol/storks-opentelemetry-reqnroll/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/siavol/storks-opentelemetry-reqnroll/actions/workflows/ci.yml?query=branch%3Amain)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=siavol_storks-opentelemetry-reqnroll&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=siavol_storks-opentelemetry-reqnroll)
 
 A Reqnroll plugin that receives your application's OpenTelemetry traces and logs during `dotnet test` and shows them by scenario and step in a Telemetry Viewer linked from the Reqnroll report.

@@ -67,7 +67,9 @@ jobs:
           print("\n".join(f"{o:>8}  {n}" for n, o in sorted(outcomes.items())))
           red = sorted(n for n, o in outcomes.items() if o != "Passed")
           expected = [os.environ["EXPECTED_RED"]]
-          if red != expected or len(outcomes) < 2:
+          # The red scenario plus at least one passing test: a run that lost its other tests must not pass.
+          min_tests = 2
+          if red != expected or len(outcomes) < min_tests:
               sys.exit(f"::error::Expected exactly {expected} to fail and all other tests to pass; not passed: {red}")
 
       - name: Report checks

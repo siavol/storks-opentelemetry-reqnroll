@@ -107,7 +107,7 @@ npx -p @mermaid-js/mermaid-cli@11.4.2 mmdc -i docs/images/how-it-works.mmd -o do
 Formatting and analyzer rules are enforced by the build, so review is not spent on style:
 
 - `.editorconfig` holds the style rules; `EnforceCodeStyleInBuild` and `AnalysisLevel=latest-recommended` (set for every project in `Directory.Build.props`) turn them and the .NET analyzers into build diagnostics.
-- CI builds with warnings as errors. Fix warnings instead of suppressing them; a targeted suppression needs a comment explaining why. The existing ones are in `.editorconfig` (test projects: `CA1707` for sentence-style test names, `CA1861` for inline expected values) and `samples/Aspire/AppHost/AppHost.csproj` (`ASPIRE010`).
+- CI builds with warnings as errors. Fix warnings instead of suppressing them; a targeted suppression needs a comment explaining why. The existing ones are in `.editorconfig` (test projects: `CA1707` for sentence-style test names, `CA1861` for inline expected values) `samples/Aspire/AppHost/AppHost.csproj` (`ASPIRE010`) and `src/Storks.OpenTelemetry.Reqnroll/ReqnrollScenario.cs` (`S3011` on `FeatureUri`: Reqnroll exposes the feature file path only through non-public members).
 - The public API is only `ITelemetryEndpoint`; every other type in the package is `internal` (the unit tests see them through `InternalsVisibleTo`, and Reqnroll discovers internal `[Binding]` classes, so hook classes stay internal too). The contract is tracked by `Microsoft.CodeAnalysis.PublicApiAnalyzers` in `src/Storks.OpenTelemetry.Reqnroll/PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt`: adding, changing or removing a public member without updating these files fails the build (`RS0016`/`RS0017`). New members go to `PublicAPI.Unshipped.txt`; on release they move to `PublicAPI.Shipped.txt`. The package project generates its XML documentation file, so an undocumented public member fails the build too (`CS1591`).
 
 Before opening a PR, run what CI runs:
@@ -169,14 +169,15 @@ The package (`dotnet pack src/Storks.OpenTelemetry.Reqnroll`) contains the plugi
 To release (maintainers), tag a commit on `main` whose CI is green and push the tag:
 
 ```sh
-git tag v0.1.0
+git fetch origin
+git tag v0.1.0 origin/main
 git push origin v0.1.0
 ```
 
 The tag starts `.github/workflows/release.yml`:
 
 1. **Build:** the same `build.yml` as CI (ubuntu and windows), with the NuGet cache off, so the published package is restored from nuget.org only.
-2. **Version matches the tag:** the packed nupkg and snupkg must carry exactly the tag's version (`v0.1.0` gives `0.1.0`); otherwise the run stops before anything is published.
+2. **Version matches the tag:** the tagged commit must be on `main` (a tag on any other commit stops the run), and the packed nupkg and snupkg must carry exactly the tag's version (`v0.1.0` gives `0.1.0`); otherwise the run stops before anything is published.
 3. **E2E:** the same `e2e.yml` as CI, on that nupkg.
 4. **Publish to nuget.org:** runs in the `nuget` GitHub environment, which accepts only `v*` tags and waits for a maintainer's approval (Review deployments in the run). It is the only job with `id-token: write`: `NuGet/login` exchanges the OIDC token for a short-lived API key through Trusted Publishing (no stored API key; the nuget.org user is the `NUGET_USER` repository variable), and `dotnet nuget push` pushes exactly the nupkg and snupkg that passed E2E, without a rebuild.
 5. **GitHub Release:** created for the tag with generated release notes and the nupkg attached. A version with a prerelease suffix (`v0.2.0-rc.1`) becomes a prerelease on nuget.org and on GitHub.
