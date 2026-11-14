@@ -9,18 +9,16 @@ A Reqnroll plugin that receives your application's OpenTelemetry traces and logs
 
 ## Why
 
-A scenario goes red: `Expected: 50m But was: 0m`. The test only sees the answer; the reason is inside the system under test (SUT). Orders called Pricing, Pricing failed and logged an error, Orders fell back to a zero price. To find that, you usually open Jaeger, the Aspire dashboard or log files, guess when the scenario ran, narrow the results down to Orders and Pricing and work out which requests belong to which scenario.
+A scenario goes red: `Expected: 50m But was: 0m`. The test sees only the result; the cause is inside the system under test (SUT).
 
-With the plugin, every step and scenario in the Reqnroll report has an **Open telemetry** link. It opens the spans and logs of exactly that step or scenario: the span waterfall across services, the logs on the same timeline, and the properties of each span and log. In the screenshot above, the failed `GET /prices/{sku}` span and the `Pricing failed for SKU BROKEN-1` log are right next to the red step.
-
-The viewer is one self-contained HTML file next to the report. It needs no running service and works the same from a CI artifact you downloaded. All of the run's telemetry is also saved as standard OTLP/JSON Lines for any other tool.
+The plugin links every scenario and step in the Reqnroll report to the traces and logs it produced. The cause is right next to the red step, with no digging through Jaeger or log files. The viewer is one HTML file next to the report, so it works from a downloaded CI artifact too.
 
 ## Quickstart
 
 You need:
 
 - a test project on `net10.0` or later with Reqnroll 3.x;
-- a SUT that the tests start on the same machine, instrumented with OpenTelemetry and exporting over OTLP with the exporter settings taken from the standard `OTEL_*` environment variables. In .NET, `UseOtlpExporter()` or `AddOtlpExporter()` do that as long as the code does not set the endpoint itself.
+- an application that your tests start locally and that exports OpenTelemetry over OTLP (step 2).
 
 **1. Install the package** into the test project. The plugin activates by being referenced; there is nothing to register in `reqnroll.json`.
 
@@ -28,7 +26,7 @@ You need:
 dotnet add package Storks.OpenTelemetry.Reqnroll
 ```
 
-**2. Point the SUT's exporter at the plugin.** In the `[BeforeTestRun]` hook that starts your SUT, take `ITelemetryEndpoint` as a parameter and copy `GetExporterEnvironment()` into the SUT's environment. That loop is the one line to add:
+**2. Point the application's exporter at the plugin.** In the `[BeforeTestRun]` hook that starts your application, take `ITelemetryEndpoint` as a parameter and copy `GetExporterEnvironment()` into its environment. That loop is the one line to add. The application must take its exporter settings from these `OTEL_*` variables: in .NET, `UseOtlpExporter()` or `AddOtlpExporter()` without an explicit endpoint.
 
 ```csharp
 using System.Diagnostics;
@@ -46,7 +44,7 @@ public static class SutHooks
         var start = new ProcessStartInfo("dotnet", "path/to/MyApi.dll --urls http://127.0.0.1:5080");
         foreach (var (name, value) in telemetry.GetExporterEnvironment()) start.Environment[name] = value;
         _sut = Process.Start(start);
-        // ... wait until the SUT answers
+        // ... wait until the application answers
     }
 
     [AfterTestRun]
