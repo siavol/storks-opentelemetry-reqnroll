@@ -61,8 +61,8 @@ jobs:
         shell: python
         run: |
           import os, sys, xml.etree.ElementTree as ET
-          ns = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
-          results = ET.parse(os.environ["TRX"]).getroot().findall(".//t:UnitTestResult", ns)
+          # "{*}" matches the trx XML namespace without spelling out its URI.
+          results = ET.parse(os.environ["TRX"]).getroot().findall(".//{*}UnitTestResult")
           outcomes = {r.get("testName"): r.get("outcome") for r in results}
           print("\n".join(f"{o:>8}  {n}" for n, o in sorted(outcomes.items())))
           red = sorted(n for n, o in outcomes.items() if o != "Passed")
