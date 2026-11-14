@@ -6,7 +6,7 @@ A Reqnroll plugin that receives your application's OpenTelemetry traces and logs
 
 ## Why
 
-A scenario goes red: `Expected: 50m But was: 0m`. The test only sees the answer; the reason is inside the system under test (SUT). Orders called Pricing, Pricing failed and logged an error, Orders fell back to a zero price. To find that, you usually open Jaeger, the Aspire dashboard or log files, guess the time range of the test, filter by service and work out which requests belong to which scenario.
+A scenario goes red: `Expected: 50m But was: 0m`. The test only sees the answer; the reason is inside the system under test (SUT). Orders called Pricing, Pricing failed and logged an error, Orders fell back to a zero price. To find that, you usually open Jaeger, the Aspire dashboard or log files, guess when the scenario ran, narrow the results down to Orders and Pricing and work out which requests belong to which scenario.
 
 With the plugin, every step and scenario in the Reqnroll report has an **Open telemetry** link. It opens the spans and logs of exactly that step or scenario: the span waterfall across services, the logs on the same timeline, and the properties of each span and log. In the screenshot above, the failed `GET /prices/{sku}` span and the `Pricing failed for SKU BROKEN-1` log are right next to the red step.
 

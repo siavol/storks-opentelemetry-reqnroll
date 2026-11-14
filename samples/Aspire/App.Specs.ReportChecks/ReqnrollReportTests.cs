@@ -26,7 +26,7 @@ public class ReqnrollReportTests
         var messages = CucumberMessages.Load();
         foreach (var scenario in new[] { Red, Green })
         {
-            // The link is a log message (WriteLine, text/x.cucumber.log+plain) with a clickable <a href> (ticket 03).
+            // The link is a log message (WriteLine, text/x.cucumber.log+plain) with a clickable <a href>; an attachment would not be clickable.
             var stepLinks = messages.TelemetryLinks(scenario).Where(l => l.Link.Contains("&step=")).ToList();
 
             // Guards the listener order: a step link must land on the Gherkin step, never on a (shared) hook step.

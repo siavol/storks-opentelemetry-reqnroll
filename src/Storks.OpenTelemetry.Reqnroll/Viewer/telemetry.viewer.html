@@ -435,7 +435,7 @@ function renderHead() {
     b.append(el("span", "pill " + s.status, s.status), document.createTextNode(s.name));
     const sub = [model.entry.feature];
     if (s.tags.length) sub.push(s.tags.join(" "));
-    // As in prototype D: from the first window start to the last window end of the windows on screen, i.e. the time the
+    // From the first window start to the last window end of the windows on screen, i.e. the time the
     // steps took (durationMs of the index) with hooks hidden, and with the hooks around them when they are shown.
     const w = model.windows;
     const windowsMs = w.length

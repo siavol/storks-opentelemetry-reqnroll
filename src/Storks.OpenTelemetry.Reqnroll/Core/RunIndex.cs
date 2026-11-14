@@ -116,7 +116,7 @@ internal sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, Unatt
         }).ToList();
         // Hook windows do not overlap step windows either; should they share an instant, the step keeps the item.
         var hooks = run.Hooks.Select(h => HookEntry(h, run.Start, attributor)).ToList();
-        // The header of prototype D: from the first step start to the last step end, without the hooks around them.
+        // The duration in the viewer's scenario header: from the first step start to the last step end, without the hooks around them.
         var duration = run.Steps.Count == 0 ? run.End - run.Start : run.Steps.Max(st => st.End) - run.Steps.Min(st => st.Start);
         return new(run.Id, run.Name, run.Status, run.Tags, Ms(duration),
             run.Error ?? run.Steps.FirstOrDefault(s => s.Error is not null)?.Error, steps, hooks, HookTelemetry(hooks, spansIn, logsIn),

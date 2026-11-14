@@ -116,6 +116,7 @@ dotnet test tests/Storks.OpenTelemetry.Reqnroll.Tests --no-build
 ### Dependencies
 
 - All package versions live in one file, `Directory.Packages.props` (Central Package Management). Do not put `Version` on a `PackageReference` in a csproj. Versions shared by a package family are properties there.
+  - The one exception is the plugin itself: the samples' `PackageVersion` of `Storks.OpenTelemetry.Reqnroll` is declared in `samples/Directory.Build.targets`, because it exists only in local package mode, where its version is the newest package in the local feed (see [Package reference modes](#package-reference-modes)).
 - Reqnroll has two properties in `Directory.Packages.props`:
   - `ReqnrollMinVersion` (3.0.0) is the oldest Reqnroll the plugin is verified on. The package depends on `[ReqnrollMinVersion, 4.0)` and the plugin compiles against that lower bound. Reqnroll 4.x is excluded until it is verified.
   - `ReqnrollVersion` is the concrete Reqnroll that the unit tests and the samples run on (they set `VersionOverride="$(ReqnrollVersion)"`). Pass `-p:ReqnrollVersion=3.x.y` to test against another Reqnroll. The lock files record the default version, so also pass `-p:RestoreLockedMode=false`, and do not commit the lock files that restore rewrites.

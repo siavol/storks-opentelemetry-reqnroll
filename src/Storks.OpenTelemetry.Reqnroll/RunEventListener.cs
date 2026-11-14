@@ -7,7 +7,7 @@ namespace Storks.OpenTelemetry.Reqnroll;
 /// <summary>
 /// Writes the link as an <c>&lt;a href&gt;</c> log line via <c>WriteLine</c> (<c>text/x.cucumber.log+plain</c>) to the step or
 /// hook currently running. Reqnroll's HTML report renders log messages as HTML, so the link is clickable there; an attached
-/// file is not (<c>text/html</c> is shown as escaped source, <c>text/uri-list</c> is unreachable via AddAttachment), see ticket 03.
+/// file is not (<c>text/html</c> is shown as escaped source, <c>text/uri-list</c> is unreachable via AddAttachment).
 /// </summary>
 internal sealed class ReqnrollLinkWriter(IReqnrollOutputHelper output) : ILinkWriter
 {
@@ -16,9 +16,9 @@ internal sealed class ReqnrollLinkWriter(IReqnrollOutputHelper output) : ILinkWr
 }
 
 /// <summary>
-/// Async listener (see ticket 01 spike): output added on <see cref="StepFinishedEvent"/> lands on the Gherkin step itself,
-/// not on a hook. Records the run (steps, hooks, statuses, windows) and writes the step link.
-/// Never throws: errors go to <see cref="PluginDiagnostics"/>.
+/// Async listener: output added on <see cref="StepFinishedEvent"/> lands on the Gherkin step itself, not on a hook (output
+/// written from an AfterStep hook would land on the hook's test step). Records the run (steps, hooks, statuses, windows)
+/// and writes the step link. Never throws: errors go to <see cref="PluginDiagnostics"/>.
 /// </summary>
 internal sealed class RunEventListener(RunTracker tracker, RunRecord record, PluginDiagnostics diagnostics) : IAsyncExecutionEventListener
 {

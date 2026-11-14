@@ -91,7 +91,7 @@ public class RunIndexTests
 
         var scenarios = RunIndex.Build(record.Snapshot()).Features.Single().Scenarios;
 
-        Assert.That(scenarios[0].DurationMs, Is.EqualTo(120), "as the header of prototype D");
+        Assert.That(scenarios[0].DurationMs, Is.EqualTo(120), "from the first step start to the last step end");
         Assert.That(scenarios[1].DurationMs, Is.EqualTo(30), "without steps: the whole window");
     }
 
