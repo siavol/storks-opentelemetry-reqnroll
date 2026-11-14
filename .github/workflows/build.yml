@@ -61,7 +61,19 @@ jobs:
           cache: ${{ inputs.nuget-cache }}
 
       - name: Restore (locked)
+        if: runner.os == 'Linux'
         run: dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
+
+      # The Aspire AppHost SDK references the dashboard and DCP packages for the build machine's RID
+      # (Aspire.Dashboard.Sdk.linux-x64, ...), so the samples' lock files are valid on linux-x64 only and the
+      # locked restore above is the lock file check. Here the samples restore unlocked; the package's and the
+      # unit tests' lock files are platform-neutral and must stay unchanged.
+      - name: Restore (samples unlocked)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          dotnet restore Storks.OpenTelemetry.Reqnroll.slnx -p:RestoreLockedMode=false
+          git diff --exit-code -- src tests
 
       - name: Check formatting
         run: dotnet format Storks.OpenTelemetry.Reqnroll.slnx --verify-no-changes --no-restore

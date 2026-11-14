@@ -139,7 +139,7 @@ dotnet test tests/Storks.OpenTelemetry.Reqnroll.Tests "-p:ReqnrollVersion=3.*" -
 
 - If the plugin starts to need a newer Reqnroll, raise `ReqnrollMinVersion` and the version in the minimum command together, so the declared range stays true.
 - `global.json` pins the .NET SDK and the `Aspire.AppHost.Sdk` MSBuild SDK. MSBuild resolves SDKs before reading properties, so when you update Aspire, change `AspireVersion` in `Directory.Packages.props` and `Aspire.AppHost.Sdk` in `global.json` together.
-- Restore uses NuGet lock files (`packages.lock.json`, one per project). When the environment variable `CI` is `true` (as on GitHub Actions), restore runs in locked mode and fails if a lock file is out of date. After adding or updating a dependency, run `dotnet restore Storks.OpenTelemetry.Reqnroll.slnx` and commit the updated lock files. To check them the way CI does:
+- Restore uses NuGet lock files (`packages.lock.json`, one per project). When the environment variable `CI` is `true` (as on GitHub Actions), restore runs in locked mode and fails if a lock file is out of date. After adding or updating a dependency, run `dotnet restore Storks.OpenTelemetry.Reqnroll.slnx` and commit the updated lock files. The Aspire AppHost SDK references the dashboard and DCP packages for the build machine's runtime (`Aspire.Dashboard.Sdk.linux-x64` and so on), so the samples' lock files are generated on linux-x64 and a locked restore of the samples fails on other platforms; CI checks the lock files on ubuntu, and its windows build restores the samples unlocked. To check them the way CI does:
 
 ```sh
 dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
@@ -152,7 +152,7 @@ dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
 - Use the terms from [GLOSSARY.md](GLOSSARY.md) in code, tests and docs; add a term there if you introduce one.
 - CI (`.github/workflows/ci.yml`) runs on every PR, including PRs from forks, and on every push to `main`. Its jobs:
   - **Lint workflows:** `actionlint`, then `zizmor`, over `.github/`.
-  - **Build** (`build.yml`, on ubuntu and windows): locked restore, `dotnet format --verify-no-changes`, build with warnings as errors, unit tests with coverage; on ubuntu also `dotnet pack`, uploaded as the `packages` artifact.
+  - **Build** (`build.yml`, on ubuntu and windows): locked restore (on windows the samples restore unlocked, see [Dependencies](#dependencies)), `dotnet format --verify-no-changes`, build with warnings as errors, unit tests with coverage; on ubuntu also `dotnet pack`, uploaded as the `packages` artifact.
   - **E2E** (`e2e.yml`, ubuntu): the Aspire sample in local package mode on that nupkg, then the report checks. The run must end with exactly the `@demo-failure` scenario red; any other failure fails the job.
   - **Reqnroll 3.0.0 / 3.\***: the unit tests on the minimum and on the latest Reqnroll 3.x (see [Dependencies](#dependencies)).
   - A newer push to a PR cancels its outdated run.
