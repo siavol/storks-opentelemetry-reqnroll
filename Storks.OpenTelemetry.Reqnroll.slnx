@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Storks.OpenTelemetry.Reqnroll/Storks.OpenTelemetry.Reqnroll.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Storks.OpenTelemetry.Reqnroll.Tests/Storks.OpenTelemetry.Reqnroll.Tests.csproj" />
+  </Folder>
+  <Folder Name="/samples/" />
+  <Folder Name="/samples/Aspire/">
+    <Project Path="samples/Aspire/AppHost/AppHost.csproj" />
+    <Project Path="samples/Aspire/Orders.Api/Orders.Api.csproj" />
+    <Project Path="samples/Aspire/Pricing.Api/Pricing.Api.csproj" />
+    <Project Path="samples/Aspire/ServiceDefaults/ServiceDefaults.csproj" />
+    <Project Path="samples/Aspire/App.Sut.Tests/App.Sut.Tests.csproj" />
+    <Project Path="samples/Aspire/App.Specs/App.Specs.csproj" />
+    <Project Path="samples/Aspire/App.Specs.ReportChecks/App.Specs.ReportChecks.csproj" />
+  </Folder>
+</Solution>

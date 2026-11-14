@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Seam 1: reads the artifacts of an App.Specs run (Cucumber Messages NDJSON). Does not run App.Specs itself.
+    Run App.Specs first (needs docker), then:  dotnet test samples/Aspire/App.Specs.ReportChecks
+    Override the report location with APP_SPECS_REPORT_DIR.
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageReference Include="NUnit" Version="4.4.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
+  </ItemGroup>
+</Project>
