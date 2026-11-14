@@ -2,23 +2,35 @@ using Reqnroll;
 
 namespace GherkinOtel.ReqnrollPlugin;
 
-/// <summary>End-of-run work: writes the Unattributed Telemetry file and stops the receiver. Never fails the run.</summary>
+/// <summary>End-of-run work: writes the Telemetry Viewer page and the OTLP/JSON files, and stops the receiver. Never fails the run.</summary>
 [Binding]
 public static class RunHooks
 {
     // Runs after the test project's own AfterTestRun hooks (default order 10000), so that telemetry
-    // flushed by the SUT while shutting down is still received.
+    // flushed by the SUT while shutting down is still received. No pause is needed here: stopping the AppHost
+    // waits for the SUT processes, which export what they have before exiting (ticket 09, demo run).
     [AfterTestRun(Order = int.MaxValue)]
-    public static async Task FinishRun(OtlpReceiver receiver, TelemetryStore store, RunWindows windows, PluginDiagnostics diagnostics)
+    public static async Task FinishRun(OtlpReceiver receiver, TelemetryStore store, RunRecord record, PluginDiagnostics diagnostics)
     {
+        var directory = ReportDirectory.Resolve();
         try
         {
-            var path = UnattributedReport.Write(UnattributedReport.DefaultDirectory(), store, windows);
-            Console.WriteLine($"[GherkinOtel] unattributed telemetry written to {path}");
+            var page = ViewerPage.Write(directory, record, store);
+            Console.WriteLine($"[GherkinOtel] telemetry viewer written to {page}");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[GherkinOtel] failed to write unattributed telemetry: {ex}");
+            Console.Error.WriteLine($"[GherkinOtel] failed to write the telemetry viewer: {ex}");
+        }
+
+        try
+        {
+            OtlpJsonFiles.Write(directory, store);
+            Console.WriteLine($"[GherkinOtel] OTLP/JSON telemetry written to {directory}");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[GherkinOtel] failed to write OTLP/JSON telemetry: {ex}");
         }
 
         try

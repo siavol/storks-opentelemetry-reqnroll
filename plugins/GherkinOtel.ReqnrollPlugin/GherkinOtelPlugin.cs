@@ -1,4 +1,5 @@
 using GherkinOtel.ReqnrollPlugin;
+using Reqnroll.Events;
 using Reqnroll.Plugins;
 using Reqnroll.UnitTestProvider;
 
@@ -14,8 +15,6 @@ public sealed class GherkinOtelPlugin : IRuntimePlugin
         UnitTestProviderConfiguration unitTestProviderConfiguration)
     {
         // Lets Reqnroll discover the [Binding] hooks in this assembly without any manual registration.
-        // Hooks (rather than plugin lifecycle events) are used because only they run in a hook context
-        // in which attachments reach the Cucumber Messages report.
         runtimePluginEvents.ConfigurationDefaults += (_, args) =>
             args.ReqnrollConfiguration.AdditionalStepAssemblies.Add(typeof(GherkinOtelPlugin).Assembly.FullName!);
 
@@ -27,13 +26,24 @@ public sealed class GherkinOtelPlugin : IRuntimePlugin
             // Started here, i.e. before any hook can run.
             receiver.StartAsync().GetAwaiter().GetResult();
 
+            var record = new RunRecord();
             var container = args.ObjectContainer;
             container.RegisterInstanceAs(store);
             container.RegisterInstanceAs(receiver);
             container.RegisterInstanceAs(diagnostics);
-            container.RegisterInstanceAs(new RunWindows());
+            container.RegisterInstanceAs(record);
+            container.RegisterInstanceAs(new RunTracker(record, diagnostics));
             container.RegisterInstanceAs<ITelemetryEndpoint>(new TelemetryEndpoint(receiver.Endpoint));
-            container.RegisterInstanceAs(PluginOptions.FromEnvironment());
+        };
+
+        // An async listener, because output (the step link) written on StepFinishedEvent lands on the Gherkin step
+        // itself; written from an AfterStep hook it would land on the hook's test step. Subscribed before
+        // CucumberMessagePublisher, so it runs first; tests/App.Specs.ReportChecks guard this order.
+        runtimePluginEvents.CustomizeTestThreadDependencies += (_, args) =>
+        {
+            var container = args.ObjectContainer;
+            container.Resolve<ITestThreadExecutionEventPublisher>()
+                .AddListener(new RunEventListener(container.Resolve<RunTracker>(), container.Resolve<RunRecord>(), container.Resolve<PluginDiagnostics>()));
         };
     }
 }

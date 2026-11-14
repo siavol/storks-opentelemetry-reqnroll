@@ -8,6 +8,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Reqnroll" Version="3.3.4" />
     <PackageReference Include="Google.Protobuf" Version="3.36.1" />
+    <EmbeddedResource Include="Viewer/telemetry.viewer.html" LogicalName="GherkinOtel.ReqnrollPlugin.Viewer.telemetry.viewer.html" />
     <PackageReference Include="Grpc.Tools" Version="2.83.0" PrivateAssets="all" />
     <Protobuf Include="Protos/**/*.proto" ProtoRoot="Protos" GrpcServices="None" />
   </ItemGroup>

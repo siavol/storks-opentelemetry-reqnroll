@@ -62,6 +62,14 @@ public sealed class OtlpReceiver : IAsyncDisposable
         }
     }
 
+    /// <summary>Keeps the accepted request as received and its neutral mapping; a log's id is its position among the received requests.</summary>
+    public static void StoreLogs(TelemetryStore store, ExportLogsServiceRequest export) =>
+        store.AddLogs(export, requestIndex => OtlpMapper.MapLogs(export, requestIndex));
+
+    /// <summary>Keeps the accepted request as received and its neutral mapping.</summary>
+    public static void StoreTraces(TelemetryStore store, ExportTraceServiceRequest export) =>
+        store.AddTraces(export, OtlpMapper.MapSpans(export));
+
     public Uri Endpoint { get; private set; } = null!;
 
     public async Task StartAsync()
@@ -72,9 +80,9 @@ public sealed class OtlpReceiver : IAsyncDisposable
         var app = builder.Build();
 
         app.MapPost("/v1/logs", ctx => Handle(ctx.Request, "/v1/logs", ExportLogsServiceRequest.Parser,
-            export => _store.AddLogs(OtlpMapper.MapLogs(export)), new ExportLogsServiceResponse()));
+            export => StoreLogs(_store, export), new ExportLogsServiceResponse()));
         app.MapPost("/v1/traces", ctx => Handle(ctx.Request, "/v1/traces", ExportTraceServiceRequest.Parser,
-            export => _store.AddSpans(OtlpMapper.MapSpans(export)), new ExportTraceServiceResponse()));
+            export => StoreTraces(_store, export), new ExportTraceServiceResponse()));
         app.MapPost("/v1/metrics", () => Results.Bytes([], "application/x-protobuf"));
 
         await app.StartAsync();

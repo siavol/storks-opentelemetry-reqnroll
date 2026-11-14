@@ -2,74 +2,30 @@ using Reqnroll;
 
 namespace GherkinOtel.ReqnrollPlugin;
 
-/// <summary>Observation Window bookkeeping and attachment of Scenario Telemetry. Never changes the scenario result.</summary>
+/// <summary>
+/// Opens and closes the scenario's Observation Window, so that the test project's scenario hooks are inside it and the
+/// plugin's own hooks are not, and, last of all, writes the plugin's diagnostics to the scenario output. Telemetry itself
+/// goes to the Telemetry Viewer at the end of the run (<see cref="RunHooks"/>). Never changes the scenario result.
+/// </summary>
 [Binding]
-public sealed class TelemetryHooks(
-    IReqnrollOutputHelper output,
-    TelemetryStore store,
-    PluginOptions options,
-    RunWindows runWindows,
-    PluginDiagnostics diagnostics)
+public sealed class TelemetryHooks(IReqnrollOutputHelper output, PluginDiagnostics diagnostics, ScenarioState state)
 {
-    private DateTimeOffset _scenarioStart;
+    /// <summary>Order of the plugin's AfterScenario hooks: close the window, write the scenario link, flush diagnostics.</summary>
+    internal const int CloseWindowOrder = int.MaxValue - 2, ScenarioLinkOrder = int.MaxValue - 1, FlushDiagnosticsOrder = int.MaxValue;
 
     [BeforeScenario(Order = int.MinValue)]
-    public void OpenWindow() => _scenarioStart = DateTimeOffset.UtcNow;
+    public void OpenWindow() => state.Run?.OpenWindow(DateTimeOffset.UtcNow);
 
-    private DateTimeOffset _stepStart;
+    [AfterScenario(Order = CloseWindowOrder)]
+    public void CloseWindow() => state.Run?.CloseWindow(DateTimeOffset.UtcNow);
 
-    [BeforeStep(Order = int.MinValue)]
-    public void OpenStepWindow() => _stepStart = DateTimeOffset.UtcNow;
-
-    [AfterStep(Order = int.MaxValue)]
-    public async Task AttachStepSlice()
+    [AfterScenario(Order = FlushDiagnosticsOrder)]
+    public void FlushDiagnostics()
     {
         try
         {
-            var stepWindow = new ObservationWindow(_stepStart, DateTimeOffset.UtcNow);
-            await Task.Delay(options.SettlePause);
-
-            var scenario = Attribution.Attribute(store.SnapshotLogs(), store.SnapshotSpans(), new ObservationWindow(_scenarioStart, DateTimeOffset.UtcNow)).Scenario;
-            await Attach("step-telemetry.txt", TelemetryRenderer.Render(scenario.Slice(stepWindow)));
+            foreach (var message in diagnostics.Drain()) output.WriteLine($"[GherkinOtel] {message}");
         }
-        catch (Exception ex)
-        {
-            output.WriteLine($"[GherkinOtel] failed to attach step telemetry: {ex}");
-        }
-    }
-
-    [AfterScenario(Order = int.MaxValue)]
-    public async Task AttachScenarioTelemetry()
-    {
-        try
-        {
-            var window = new ObservationWindow(_scenarioStart, DateTimeOffset.UtcNow);
-            runWindows.Add(window); // run-level remainder = what is outside every recorded window
-            await Task.Delay(options.SettlePause);
-
-            var scenario = Attribution.Attribute(store.SnapshotLogs(), store.SnapshotSpans(), window).Scenario;
-            await Attach("scenario-telemetry.txt", TelemetryRenderer.Render(scenario));
-        }
-        catch (Exception ex)
-        {
-            output.WriteLine($"[GherkinOtel] failed to attach scenario telemetry: {ex}");
-        }
-        finally
-        {
-            try
-            {
-                foreach (var message in diagnostics.Drain()) output.WriteLine($"[GherkinOtel] {message}");
-            }
-            catch { /* reporting problems must never change the scenario result */ }
-        }
-    }
-
-    private async Task Attach(string name, string text)
-    {
-        var dir = Path.Combine(Path.GetTempPath(), "gherkin-otel", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(dir);
-        var file = Path.Combine(dir, name);
-        await File.WriteAllTextAsync(file, text);
-        output.AddAttachment(file);
+        catch { /* reporting problems must never change the scenario result */ }
     }
 }

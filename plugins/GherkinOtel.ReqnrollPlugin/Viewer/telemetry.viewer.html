@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telemetry Viewer</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff; --bg2: #f6f7f9; --bg3: #eceef2; --fg: #1d2330; --fg2: #555d6e; --fg3: #7d8494; --line: #e1e4ea;
+  --accent: #3b6fe0; --accent-bg: #e8eefc;
+  --pass: #23864c; --fail: #c93838; --fail-bg: #fdecec; --skip: #98760f; --warn: #b8730a; --warn-bg: #fdf3e1;
+  --hook: #7d68c9; --hot: #ff9f1a;
+  --s1: #3b82c4; --s2: #c46a2b; --s3: #2f9e8f; --s4: #9b5fc0;
+  --sb-thumb: rgba(29, 35, 48, .22); --sb-thumb-hover: rgba(29, 35, 48, .40);
+  --tree: 380px;
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15181e; --bg2: #1b1f27; --bg3: #252a34; --fg: #e3e6ec; --fg2: #a9b0bd; --fg3: #808898; --line: #2c323d;
+    --accent: #6f9bff; --accent-bg: #1f2a44; --fail-bg: #3a1e22; --warn-bg: #3a2e18;
+    --pass: #34a865; --fail: #e05353; --warn: #e09a2a;
+    --sb-thumb: rgba(227, 230, 236, .18); --sb-thumb-hover: rgba(227, 230, 236, .34);
+  }
+}
+* { box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--sb-thumb) transparent; }
+*:hover { scrollbar-color: var(--sb-thumb-hover) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 4px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); background-clip: padding-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); height: 100vh; display: grid; grid-template-columns: 260px minmax(0, 1fr) auto; overflow: hidden; }
+pre, .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12px; }
+button { font: inherit; color: inherit; }
+
+/* sidebar: features and scenario runs */
+#side { background: var(--bg2); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: auto; }
+#side h1 { font-size: 13px; margin: 0; padding: 14px 14px 10px; color: var(--fg2); font-weight: 600; }
+.feat { padding: 8px 14px 4px; font-weight: 600; }
+.feat small { color: var(--fg3); font-weight: 400; display: block; }
+.sc { display: flex; gap: 8px; padding: 6px 14px 6px 22px; cursor: pointer; align-items: flex-start; }
+.sc:hover { background: var(--bg3); }
+.sc.sel { background: var(--accent-bg); }
+.sc .meta { color: var(--fg3); font-size: 11px; }
+.st { flex: none; width: 16px; text-align: center; font-weight: 700; }
+.st.passed { color: var(--pass); } .st.failed { color: var(--fail); } .st.skipped, .st.undefined, .st.pending { color: var(--skip); } .st.hook { color: var(--hook); }
+.side-gap { flex: 1; }
+.sc.unattr { border-top: 1px solid var(--line); padding: 10px 14px; }
+
+/* main column */
+#main { display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+header { padding: 10px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 16px; align-items: center; flex: none; flex-wrap: wrap; }
+header .title { flex: 1; min-width: 260px; }
+header .title b { font-size: 15px; }
+header .sub { color: var(--fg2); font-size: 12px; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; color: #fff; vertical-align: 2px; margin-right: 6px; }
+.pill.passed { background: var(--pass); } .pill.failed { background: var(--fail); } .pill.none, .pill.skipped, .pill.pending, .pill.undefined { background: var(--fg3); }
+.toggle { display: flex; gap: 6px; align-items: center; white-space: nowrap; cursor: pointer; user-select: none; }
+.toggle.disabled { opacity: .5; cursor: default; }
+select { font: inherit; font-size: 12px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; cursor: pointer; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--bg); padding: 2px 10px; cursor: pointer; font-size: 12px; border-left: 1px solid var(--line); white-space: nowrap; }
+.seg button:first-child { border-left: 0; }
+.seg button.on { background: var(--accent); color: #fff; }
+.ctl { display: flex; gap: 6px; align-items: center; color: var(--fg2); font-size: 12px; }
+#body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.scroll { overflow: auto; flex: 1; min-height: 0; padding-bottom: 50px; }
+
+/* waterfall rows */
+.row { display: grid; grid-template-columns: var(--tree) 1fr; min-height: 26px; }
+.row:hover { background: var(--bg2); }
+.row.sel { background: var(--accent-bg); }
+.tree { display: flex; align-items: center; gap: 6px; padding-right: 8px; overflow: hidden; white-space: nowrap; border-right: 1px solid var(--line); }
+.lane { position: relative; overflow: hidden; margin: 0 14px 0 6px; }
+.axis { position: sticky; top: 0; z-index: 3; background: var(--bg); border-bottom: 1px solid var(--line); height: 22px; }
+.axis:hover { background: var(--bg); }
+.axis .tick { position: absolute; top: 3px; font-size: 10px; color: var(--fg3); transform: translateX(-50%); white-space: nowrap; }
+.axis .tick:first-child { transform: none; }
+.lbl { padding-left: 16px; color: var(--fg2); font-weight: 400; font-size: 11px; }
+.caret { width: 14px; flex: none; text-align: center; color: var(--fg3); cursor: pointer; user-select: none; }
+.caret:hover { color: var(--fg); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.sname { overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.sname.nospan { color: var(--fg2); cursor: default; }
+.err > .tree .sname { color: var(--fail); font-weight: 600; }
+.svc { color: var(--fg3); font-size: 11px; }
+.dur { margin-left: auto; color: var(--fg2); font-size: 11px; padding-left: 8px; }
+.info { border: 0; background: none; color: var(--fg3); cursor: pointer; padding: 0 2px; font-size: 13px; }
+.info:hover { color: var(--accent); }
+.bar { position: absolute; top: 7px; height: 12px; border-radius: 2px; min-width: 2px; cursor: pointer; }
+.bar.err { background: var(--fail) !important; }
+.bar.open { outline: 1px dashed var(--fg3); outline-offset: 1px; }
+.row.hot .bar { box-shadow: 0 0 0 2px var(--hot); }
+.ltick { position: absolute; top: 4px; height: 18px; width: 3px; margin-left: -1px; border-radius: 1px; background: var(--fg3); cursor: pointer; z-index: 1; box-shadow: 0 0 0 1px var(--bg); }
+.ltick.TRC, .ltick.DBG { opacity: .5; }
+.ltick.WRN { background: var(--warn); opacity: 1; } .ltick.ERR, .ltick.FTL { background: var(--fail); opacity: 1; }
+.ltick.dim { opacity: .2; }
+.ltick.hot { background: var(--hot) !important; opacity: 1; top: 0; height: 26px; width: 5px; margin-left: -2px; z-index: 4; box-shadow: 0 0 0 2px var(--bg), 0 0 8px var(--hot); }
+.cursor { position: absolute; top: 0; bottom: 0; border-left: 2px solid var(--hot); z-index: 4; pointer-events: none; }
+.errbox { border: 1px solid var(--fail); background: var(--fail-bg); border-radius: 4px; padding: 8px 10px; }
+.errbox b { color: var(--fail); }
+.errbox pre { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.empty { padding: 14px 16px; color: var(--fg3); }
+.kw { font-weight: 700; color: var(--accent); }
+.kw.hook { color: var(--hook); font-weight: 600; }
+.skipped .kw, .skipped .txt { color: var(--fg3); }
+.chip { border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 1px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+.chip:hover { border-color: var(--accent); }
+
+/* step sections */
+.top { flex: 1 1 55%; min-height: 0; overflow: auto; position: relative; }
+.a-sec { margin: 6px 14px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.a-sec.failed { border-color: var(--fail); }
+.a-sec.hl { box-shadow: 0 0 0 2px var(--accent); }
+.a-sec.skipped { opacity: .7; }
+.a-sec.hook { border-style: dashed; opacity: .9; }
+.a-head { display: flex; gap: 8px; align-items: baseline; padding: 6px 10px; background: var(--bg2); cursor: pointer; }
+.a-head.sel { background: var(--accent-bg); }
+.a-head .txt { flex: 1; font-size: 14px; }
+.a-head .meta { color: var(--fg3); font-size: 12px; white-space: nowrap; }
+.a-head .marks { color: var(--warn); font-size: 12px; white-space: nowrap; }
+.a-head .marks .e { color: var(--fail); }
+.a-sec .errbox { margin: 8px 12px; }
+.sec-tools { display: flex; gap: 8px; padding: 6px 14px; align-items: center; color: var(--fg2); font-size: 12px; border-bottom: 1px solid var(--line); flex: none; }
+
+/* overview strip of the scenario */
+.ov { flex: none; padding: 6px 14px 4px; border-bottom: 1px solid var(--line); }
+.ov .lane { height: 22px; margin: 0; background: var(--bg2); border-radius: 3px; }
+.ov .seg-step { position: absolute; top: 3px; bottom: 3px; min-width: 2px; cursor: pointer; border-right: 1px solid var(--bg); }
+.ov .seg-step.passed { background: var(--pass); } .ov .seg-step.failed { background: var(--fail); } .ov .seg-step.skipped, .ov .seg-step.pending, .ov .seg-step.undefined { background: var(--skip); }
+.ov .seg-step.hl { outline: 2px solid var(--accent); z-index: 2; }
+.ov .mark { position: absolute; top: 0; height: 4px; width: 2px; margin-left: -1px; pointer-events: none; }
+.ov .mark.w { background: var(--warn); } .ov .mark.e { background: var(--fail); top: auto; bottom: 0; }
+.ov .legend { display: flex; justify-content: space-between; color: var(--fg3); font-size: 10px; margin-top: 2px; }
+/* log pane */
+table.logs { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.logs td { padding: 3px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.logs tr { cursor: pointer; }
+table.logs tr:hover, table.logs tr.hot { background: var(--accent-bg); box-shadow: inset 3px 0 0 var(--hot); }
+table.logs tr.TRC td, table.logs tr.DBG td { color: var(--fg3); }
+table.logs tr.WRN td { background: var(--warn-bg); } table.logs tr.ERR td, table.logs tr.FTL td { background: var(--fail-bg); }
+table.logs tr.sel td { outline: 1px solid var(--accent); }
+table.logs .t { white-space: nowrap; color: var(--fg2); width: 1%; }
+table.logs .src { white-space: nowrap; color: var(--fg3); width: 1%; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+table.logs .msg { white-space: pre-wrap; word-break: break-word; }
+table.logs .msg .more { color: var(--fg3); }
+.lvl { font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 3px; background: var(--bg3); color: var(--fg2); }
+.lvl.WRN { background: var(--warn); color: #fff; } .lvl.ERR, .lvl.FTL { background: var(--fail); color: #fff; }
+.lvl.TRC, .lvl.DBG { background: transparent; color: var(--fg3); border: 1px solid var(--line); }
+.pane { flex: 1 1 45%; min-height: 120px; border-top: 2px solid var(--line); display: flex; flex-direction: column; background: var(--bg); }
+.pane .hd { display: flex; gap: 12px; align-items: center; padding: 6px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.pane .hd b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+
+/* properties panel: a docked column, the viewer stays usable */
+#detail { display: none; width: 420px; border-left: 1px solid var(--line); overflow: auto; background: var(--bg); padding-bottom: 50px; }
+#detail.open { display: block; }
+#detail .hd { position: sticky; top: 0; background: var(--bg); padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: flex-start; }
+#detail .hd b { flex: 1; font-size: 14px; word-break: break-all; }
+#detail .x { cursor: pointer; border: 0; background: none; color: var(--fg2); font-size: 18px; line-height: 1; }
+#detail h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg3); margin: 14px 14px 4px; }
+#detail table { width: calc(100% - 28px); margin: 0 14px; border-collapse: collapse; }
+#detail td { padding: 3px 0; vertical-align: top; border-bottom: 1px solid var(--line); word-break: break-all; }
+#detail td:first-child { color: var(--fg2); width: 42%; padding-right: 8px; word-break: normal; overflow-wrap: anywhere; }
+#detail pre { margin: 0 14px; padding: 8px; background: var(--bg2); border-radius: 4px; white-space: pre-wrap; word-break: break-word; }
+#detail .none { margin: 0 14px; color: var(--fg3); }
+#detail .link { margin: 4px 14px; }
+#detail .ev { margin: 0 14px; }
+#detail a { color: var(--accent); cursor: pointer; }
+</style>
+</head>
+<body>
+<nav id="side"></nav>
+<section id="main">
+  <header id="head"></header>
+  <div id="body"></div>
+</section>
+<aside id="detail"></aside>
+<script type="application/json" id="run-index">__RUN_INDEX__</script>
+<script type="application/json" id="otlp-traces">__OTLP_TRACES__</script>
+<script type="application/json" id="otlp-logs">__OTLP_LOGS__</script>
+<script>
+"use strict";
+const data = (id) => JSON.parse(document.getElementById(id).textContent);
+const INDEX = data("run-index");
+const UNATTRIBUTED = "unattributed";
+const EXPAND_ALL_LIMIT = 8;
+const STATUS_ERROR = 2;
+// OTLP severityNumber ranges: 1-4 TRACE, 5-8 DEBUG, 9-12 INFO, 13-16 WARN, 17-20 ERROR, 21-24 FATAL.
+const LEVELS = ["TRC", "DBG", "INF", "WRN", "ERR", "FTL"];
+const SEV_WARN = 13;
+const SEV_ERROR = 17;
+const SCOPES = { own: "Own", children: "+ children", trace: "Whole trace" };
+const STATUS_NAMES = ["Unset", "Ok", "Error"];
+const KIND_NAMES = ["Unspecified", "Internal", "Server", "Client", "Producer", "Consumer"];
+const STATUS_MARK = { passed: "✓", failed: "✗", skipped: "–", undefined: "?", pending: "?" };
+
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+const fmtDur = (ms) => ms < 1 ? ms.toFixed(2) + " ms" : ms < 10 ? ms.toFixed(1) + " ms" : ms < 1000 ? Math.round(ms) + " ms" : (ms / 1000).toFixed(2) + " s";
+const fmtOff = (ms) => (ms < 0 ? "-" : "+") + (Math.abs(ms) < 1000 ? Math.abs(ms).toFixed(1) + " ms" : (Math.abs(ms) / 1000).toFixed(3) + " s");
+const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
+const shortCategory = (c) => (c || "").split(".").slice(-2).join(".");
+const firstLine = (s) => String(s).split("\n")[0];
+
+// OTLP/JSON times are unix nanoseconds in strings: keep them as BigInt, convert differences to ms.
+const nano = (s) => BigInt(s || "0");
+const msBetween = (from, to) => Number(to - from) / 1e6;
+
+/** AnyValue as text; arrays and maps as JSON, bytes as base64, so nothing is lost. */
+function anyValue(v) {
+  if (!v) return "";
+  if ("stringValue" in v) return v.stringValue;
+  if ("intValue" in v) return String(v.intValue);
+  if ("doubleValue" in v) return String(v.doubleValue);
+  if ("boolValue" in v) return String(v.boolValue);
+  if ("arrayValue" in v) return JSON.stringify((v.arrayValue.values || []).map(anyValue));
+  if ("kvlistValue" in v) return JSON.stringify(attrs(v.kvlistValue.values));
+  if ("bytesValue" in v) return v.bytesValue;
+  return JSON.stringify(v);
+}
+function attrs(list) {
+  const out = {};
+  for (const kv of list || []) out[kv.key] = anyValue(kv.value);
+  return out;
+}
+
+/** spanId -> span, from the embedded OTLP/JSON trace requests (the first copy of a span wins). */
+const SPANS = new Map();
+for (const request of data("otlp-traces")) {
+  for (const rs of request.resourceSpans || []) {
+    const resource = attrs(rs.resource && rs.resource.attributes);
+    const service = resource["service.name"] || "unknown";
+    for (const ss of rs.scopeSpans || []) {
+      for (const s of ss.spans || []) {
+        if (!s.spanId || SPANS.has(s.spanId)) continue;
+        const end = nano(s.endTimeUnixNano);
+        SPANS.set(s.spanId, {
+          id: s.spanId, traceId: s.traceId, parent: s.parentSpanId || null, name: s.name, service,
+          start: nano(s.startTimeUnixNano), end: end === 0n ? null : end,
+          error: !!(s.status && s.status.code === STATUS_ERROR), raw: s, resource, scope: ss.scope || {},
+        });
+      }
+    }
+  }
+}
+
+/** Log id of the index ("request.resource.scope.record": positions in otlp-logs) -> log. */
+const LOGS = new Map();
+data("otlp-logs").forEach((request, qi) => (request.resourceLogs || []).forEach((rl, ri) => {
+  const resource = attrs(rl.resource && rl.resource.attributes);
+  const service = resource["service.name"] || "unknown";
+  (rl.scopeLogs || []).forEach((sl, si) => (sl.logRecords || []).forEach((r, li) => {
+    const id = qi + "." + ri + "." + si + "." + li;
+    const sev = r.severityNumber || 9; // 0 (unspecified) counts as INFO
+    LOGS.set(id, {
+      id, raw: r, service, resource, scope: sl.scope || {}, sev, level: LEVELS[Math.min(5, Math.floor((sev - 1) / 4))],
+      time: nano(r.timeUnixNano && r.timeUnixNano !== "0" ? r.timeUnixNano : r.observedTimeUnixNano),
+      body: anyValue(r.body), spanId: r.spanId || null, traceId: r.traceId || null,
+    });
+  }));
+}));
+
+const services = [...new Set([...SPANS.values()].map((s) => s.service))].sort();
+const svcColor = (svc) => "var(--s" + (services.indexOf(svc) % 4 + 1) + ")";
+const spansOf = (ids) => (ids || []).map((id) => SPANS.get(id)).filter(Boolean);
+
+const scenarios = INDEX.features.flatMap((f) => f.scenarios.map((s) => ({ feature: f.name, s })));
+const byId = new Map(scenarios.map((x) => [x.s.id, x]));
+
+/**
+ * What is on screen. scope, minSev and showHooks are global settings (header); open maps a section key ("s<n>" for a
+ * step, "h<i>" for a hook) to its open state; filter selects the logs of the pane
+ * (null | { kind: "step", n } | { kind: "span", id }); detail is the item of the properties column.
+ */
+const state = { view: null, step: null, open: new Map(), scope: "children", minSev: 1, showHooks: false, filter: null, detail: null };
+let model = null;
+
+function readHash() {
+  const p = new URLSearchParams(location.hash.replace(/^#/, ""));
+  const s = p.get("s");
+  const fallback = (scenarios.find((x) => x.s.status === "failed") || scenarios[0]);
+  const step = parseInt(p.get("step"), 10);
+  return {
+    view: s === UNATTRIBUTED || byId.has(s) ? s : fallback ? fallback.s.id : UNATTRIBUTED,
+    step: byId.has(s) && Number.isFinite(step) ? step : null,
+  };
+}
+function go(view, step) {
+  location.hash = "s=" + view + (step != null ? "&step=" + step : "");
+}
+
+// ---------- model of the view on screen ----------
+
+/**
+ * The view of a scenario or of Unattributed Telemetry, derived from the index and the global settings.
+ * Scenario: windows are the steps and, with "Show hooks" on, the scenario hooks, in order of call. With hooks hidden, so is
+ * the hook telemetry of the index (hookTelemetry: hook spans with their subtree and logs, spanless logs of hook windows);
+ * a log written in a hook window for a span of a step stays with that span.
+ * The scale runs from the first visible window start to the last window end, so the windows fill the overview.
+ * Unattributed: windows are the run and feature hooks, always shown, and an "outside windows" group for the rest; the
+ * scale runs from the run start. Either scale is stretched by telemetry that runs past it.
+ * A log tick sits on the bar of its span; a log whose span is not shown sits on the "Logs without a span" row.
+ */
+function buildModel(view) {
+  const unattr = view === UNATTRIBUTED;
+  const entry = unattr ? null : byId.get(view);
+  const s = unattr ? null : entry.s;
+  const src = unattr ? INDEX.unattributed || { spanIds: [], logIds: [], hooks: [] } : s;
+  const hooks = src.hooks || [];
+  const ht = (!unattr && !state.showHooks && s.hookTelemetry) || { spanIds: [], logIds: [] };
+  const hidden = new Set(ht.spanIds.concat(ht.logIds));
+  const shown = (l) => l && l.sev >= state.minSev && !hidden.has(l.id);
+  const visibleSpans = (ids) => spansOf(ids).filter((sp) => !hidden.has(sp.id));
+  const group = (w, kind, key) => ({
+    kind, key, spans: visibleSpans(w.spanIds), logs: (w.logIds || []).map((id) => LOGS.get(id)).filter(shown),
+    start: nano(w.startUnixNano), end: nano(w.endUnixNano),
+  });
+  const steps = unattr ? [] : s.steps.map((st) => Object.assign(group(st, "step", "s" + st.number), { st }));
+  const hookGroups = unattr || state.showHooks ? hooks.map((h, i) => Object.assign(group(h, "hook", "h" + i), { h })) : [];
+  const windows = steps.concat(hookGroups).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+  const logs = (src.logIds || []).map((id) => LOGS.get(id)).filter(shown);
+  if (unattr) {
+    // Telemetry outside every run hook window: a section of its own, on the scale of that telemetry.
+    const inHooks = new Set(hooks.flatMap((h) => (h.spanIds || []).concat(h.logIds || [])));
+    const out = { kind: "outside", key: "x", spans: visibleSpans(src.spanIds).filter((sp) => !inHooks.has(sp.id)), logs: logs.filter((l) => !inHooks.has(l.id)) };
+    const times = out.spans.map((sp) => sp.start).concat(out.logs.map((l) => l.time));
+    if (times.length) {
+      out.start = out.end = times.reduce((a, b) => (b < a ? b : a));
+      windows.push(out);
+    }
+  }
+  const origin = unattr ? nano(src.startUnixNano) : windows.length ? windows[0].start : nano(s.startUnixNano);
+  let end = unattr ? nano(src.endUnixNano) : windows.length ? windows[0].end : nano(s.endUnixNano);
+  for (const g of windows) {
+    if (g.end > end) end = g.end;
+    for (const sp of g.spans) if ((sp.end || sp.start) > end) end = sp.end || sp.start;
+    for (const l of g.logs) if (l.time > end) end = l.time;
+  }
+  const scenarioSpans = visibleSpans(src.spanIds);
+  const spanIds = new Set(scenarioSpans.map((x) => x.id));
+  const children = new Map();
+  for (const sp of scenarioSpans) {
+    if (!sp.parent || !spanIds.has(sp.parent) || sp.parent === sp.id) continue;
+    if (!children.has(sp.parent)) children.set(sp.parent, []);
+    children.get(sp.parent).push(sp.id);
+  }
+  const direct = new Map();
+  for (const l of logs) {
+    if (!l.spanId || !spanIds.has(l.spanId)) continue;
+    if (!direct.has(l.spanId)) direct.set(l.spanId, []);
+    direct.get(l.spanId).push(l);
+  }
+  const subtree = (id, acc = new Set()) => {
+    if (acc.has(id)) return acc;
+    acc.add(id);
+    for (const c of children.get(id) || []) subtree(c, acc);
+    return acc;
+  };
+  /** id of a span or log -> the step ({ st }) or hook ({ h }) window it is attributed to. */
+  const windowOf = new Map();
+  for (const st of unattr ? [] : s.steps) for (const id of (st.spanIds || []).concat(st.logIds || [])) windowOf.set(id, { st });
+  for (const h of hooks) for (const id of (h.spanIds || []).concat(h.logIds || [])) windowOf.set(id, { h });
+  return {
+    unattr, entry, s, src, steps, windows, logs, origin, end, total: Math.max(msBetween(origin, end), 1), spanIds, direct, windowOf,
+    /** Logs of a span under the global scope: its own, with its subtree, or its whole trace. */
+    logsOfSpan(id) {
+      if (state.scope === "own") return direct.get(id) || [];
+      if (state.scope === "trace") { const t = SPANS.get(id).traceId; return logs.filter((l) => l.traceId === t); }
+      const ids = subtree(id);
+      return logs.filter((l) => l.spanId && ids.has(l.spanId));
+    },
+    logsWithoutSpan(g) { return g.logs.filter((l) => !l.spanId || !spanIds.has(l.spanId)); },
+  };
+}
+
+/** The logs the pane lists: of the selected span, of the selected step, or of the whole scenario. */
+function paneSelection() {
+  const f = state.filter;
+  if (f && f.kind === "span" && model.spanIds.has(f.id)) {
+    return { logs: model.logsOfSpan(f.id), title: "Logs of span " + SPANS.get(f.id).name + " · " + SCOPES[state.scope] };
+  }
+  const g = f && f.kind === "step" && model.steps.find((x) => x.st.number === f.n);
+  if (g) return { logs: g.logs, title: "Logs of step " + g.st.number + ": " + g.st.keyword + " " + g.st.text };
+  return { logs: model.logs, title: model.unattr ? "All logs outside scenarios" : "All logs of the scenario" };
+}
+
+// ---------- sidebar ----------
+
+function renderSide() {
+  const side = $("side");
+  side.replaceChildren(el("h1", "", "Telemetry Viewer"));
+  for (const f of INDEX.features) {
+    const feat = el("div", "feat", f.name);
+    if (f.uri) feat.append(el("small", "", f.uri));
+    side.append(feat);
+    for (const s of f.scenarios) {
+      const item = el("div", "sc" + (state.view === s.id ? " sel" : ""));
+      item.dataset.go = s.id;
+      const text = el("div", "", s.name);
+      const meta = [plural(s.steps.length, "step"), plural((s.spanIds || []).length, "span"), plural((s.logIds || []).length, "log")];
+      if (s.tags.length) meta.push(s.tags.join(" "));
+      text.append(el("div", "meta", meta.join(" · ")));
+      item.append(el("span", "st " + s.status, STATUS_MARK[s.status] || "·"), text);
+      side.append(item);
+    }
+  }
+  side.append(el("div", "side-gap"));
+  const un = el("div", "sc unattr" + (state.view === UNATTRIBUTED ? " sel" : ""));
+  un.dataset.go = UNATTRIBUTED;
+  const text = el("div", "", "Unattributed");
+  const u = INDEX.unattributed || {};
+  text.append(el("div", "meta", plural((u.spanIds || []).length, "span") + " · " + plural((u.logIds || []).length, "log") + " outside scenarios"));
+  un.append(el("span", "st", "◌"), text);
+  side.append(un);
+}
+
+// ---------- header ----------
+
+function renderHead() {
+  const head = $("head");
+  head.replaceChildren();
+  const title = el("div", "title");
+  const b = el("b");
+  if (model.unattr) {
+    b.append(el("span", "pill none", "outside scenarios"), document.createTextNode("Unattributed Telemetry"));
+    title.append(b, el("div", "sub", "Run hooks, AppHost start and stop · " + fmtDur(model.total)));
+  } else {
+    const s = model.s;
+    b.append(el("span", "pill " + s.status, s.status), document.createTextNode(s.name));
+    const sub = [model.entry.feature];
+    if (s.tags.length) sub.push(s.tags.join(" "));
+    // As in prototype D: from the first window start to the last window end of the windows on screen, i.e. the time the
+    // steps took (durationMs of the index) with hooks hidden, and with the hooks around them when they are shown.
+    const w = model.windows;
+    const windowsMs = w.length
+      ? msBetween(w[0].start, w.reduce((m, g) => (g.end > m ? g.end : m), w[0].end))
+      : s.durationMs;
+    sub.push(plural(s.steps.length, "step"), fmtDur(windowsMs));
+    title.append(b, el("div", "sub", sub.join(" · ")));
+  }
+
+  const scope = el("span", "ctl", "Span logs ");
+  scope.title = "Which logs belong to a span — applies everywhere in the viewer";
+  const seg = el("span", "seg");
+  for (const [k, text] of Object.entries(SCOPES)) {
+    const btn = el("button", state.scope === k ? "on" : "", text);
+    btn.dataset.scope = k;
+    seg.append(btn);
+  }
+  scope.append(seg);
+  const level = el("label", "ctl", "Min level ");
+  level.title = "Show logs of this level and above, everywhere in the viewer";
+  const select = el("select");
+  select.id = "minLevel";
+  LEVELS.forEach((code, i) => {
+    const o = el("option", "", code);
+    o.value = String(i * 4 + 1);
+    o.selected = state.minSev === i * 4 + 1;
+    select.append(o);
+  });
+  level.append(select);
+  // In Unattributed the run hook windows are the content, so they are always shown and the switch is inactive.
+  const hooks = el("label", "toggle" + (model.unattr ? " disabled" : ""));
+  hooks.title = model.unattr ? "Run hook windows are always shown in Unattributed" : "Hides hooks and the telemetry that started in their windows";
+  const box = el("input");
+  box.type = "checkbox";
+  box.id = "hooks";
+  box.checked = state.showHooks || model.unattr;
+  box.disabled = model.unattr;
+  hooks.append(box, document.createTextNode(" Show hooks"));
+  head.append(title, scope, level, hooks);
+}
+
+// ---------- overview strip ----------
+
+function renderOverview() {
+  const m = model;
+  const pct = (t) => Math.min(100, Math.max(0, (msBetween(m.origin, t) / m.total) * 100));
+  const ov = el("div", "ov");
+  const lane = el("div", "lane");
+  const segment = (cls, start, end, title) => {
+    const seg = el("div", "seg-step " + cls);
+    seg.style.left = pct(start) + "%";
+    seg.style.width = Math.max(0, pct(end) - pct(start)) + "%";
+    seg.title = title;
+    lane.append(seg);
+    return seg;
+  };
+  if (m.unattr) {
+    // The run: its hook windows and every scenario run; a click on a scenario opens it.
+    for (const g of m.windows) if (g.kind === "hook") segment("passed", g.start, g.end, g.h.hookType + " " + g.h.name).style.background = "var(--hook)";
+    for (const { s } of scenarios) segment(s.status, nano(s.startUnixNano), nano(s.endUnixNano), s.name).dataset.go = s.id;
+  }
+  for (const g of m.steps) {
+    const st = g.st;
+    const seg = el("div", "seg-step " + st.status + (state.step === st.number ? " hl" : ""));
+    seg.dataset.step = st.number;
+    seg.style.left = pct(g.start) + "%";
+    seg.style.width = Math.max(0, pct(g.end) - pct(g.start)) + "%";
+    seg.title = st.number + ". " + st.keyword + " " + st.text + " — " + st.status + ", " + fmtDur(msBetween(g.start, g.end));
+    lane.append(seg);
+  }
+  const mark = (cls, t) => {
+    const k = el("div", "mark " + cls);
+    k.style.left = pct(t) + "%";
+    lane.append(k);
+  };
+  for (const g of m.windows) {
+    for (const l of g.logs) if (l.sev >= SEV_WARN) mark(l.sev >= SEV_ERROR ? "e" : "w", l.time);
+    for (const sp of g.spans) if (sp.error) mark("e", sp.start);
+  }
+  const legend = el("div", "legend");
+  legend.append(el("span", "", "0"),
+    el("span", "", m.unattr ? "run overview: hooks and scenarios" : "scenario overview: one segment per step · marks: top = warnings, bottom = errors · click a segment to jump"),
+    el("span", "", fmtDur(m.total)));
+  ov.append(lane, legend);
+  return ov;
+}
+
+// ---------- step sections ----------
+
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  for (const k of [1, 2, 5, 10]) if (raw <= k * p) return k * p;
+  return 10 * p;
+}
+
+/** Axis of a section: "nice" ticks every 1/2/5 × 10^n ms, about seven of them. */
+function axisRow(total) {
+  const row = el("div", "row axis");
+  row.append(el("div", "tree lbl", "window scale: " + fmtDur(total)));
+  const lane = el("div", "lane");
+  const step = niceStep(total / 7);
+  for (let t = 0; t <= total + 1e-9; t += step) {
+    const tick = el("span", "tick", t === 0 ? "0" : fmtDur(t));
+    tick.style.left = (t / total) * 100 + "%";
+    lane.append(tick);
+  }
+  row.append(lane);
+  return row;
+}
+
+/** Spans of one step as a tree: a span whose parent is not in this step is a root. Siblings by start time. */
+function spanRows(spans) {
+  const ids = new Set(spans.map((s) => s.id));
+  const children = new Map();
+  const roots = [];
+  for (const s of spans) {
+    if (s.parent && ids.has(s.parent) && s.parent !== s.id) {
+      if (!children.has(s.parent)) children.set(s.parent, []);
+      children.get(s.parent).push(s);
+    } else roots.push(s);
+  }
+  const byStart = (a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0);
+  const rows = [];
+  const seen = new Set();
+  const walk = (s, depth) => {
+    if (seen.has(s.id)) return;
+    seen.add(s.id);
+    rows.push({ s, depth });
+    (children.get(s.id) || []).sort(byStart).forEach((c) => walk(c, depth + 1));
+  };
+  roots.sort(byStart).forEach((r) => walk(r, 0));
+  return rows;
+}
+
+function logTick(l, left, listed) {
+  const t = el("div", "ltick " + l.level + (listed.has(l.id) ? "" : " dim"));
+  t.dataset.log = l.id;
+  t.style.left = left + "%";
+  t.title = fmtOff(msBetween(model.origin, l.time)) + " " + l.level + " " + firstLine(l.body);
+  return t;
+}
+
+/** Waterfall of a step on the scale of the step window, stretched to the end of telemetry that runs past it. */
+function renderWaterfall(g, listed) {
+  const ticked = (s) => model.direct.get(s.id) || [];
+  let end = g.end;
+  for (const s of g.spans) {
+    const e = s.end || model.end;
+    if (e > end) end = e;
+    for (const l of ticked(s)) if (l.time > end) end = l.time;
+  }
+  for (const l of g.logs) if (l.time > end) end = l.time;
+  const total = Math.max(msBetween(g.start, end), 0.5);
+  const pct = (t) => (msBetween(g.start, t) / total) * 100;
+  const f = state.filter;
+  const frag = document.createDocumentFragment();
+  frag.append(axisRow(total));
+  for (const { s, depth } of spanRows(g.spans)) {
+    const selected = (f && f.kind === "span" && f.id === s.id) || (state.detail && state.detail.id === s.id);
+    const row = el("div", "row" + (s.error ? " err" : "") + (selected ? " sel" : ""));
+    row.dataset.row = s.id;
+    const tree = el("div", "tree");
+    tree.style.paddingLeft = depth * 16 + 8 + "px";
+    const dot = el("span", "dot");
+    dot.style.background = svcColor(s.service);
+    const name = el("span", "sname", (s.error ? "⚠ " : "") + s.name);
+    name.dataset.pick = s.id;
+    name.title = "Show its logs in the pane below";
+    const n = model.logsOfSpan(s.id).length;
+    const info = el("button", "info", "ⓘ");
+    info.dataset.span = s.id;
+    info.title = "Span properties";
+    tree.append(el("span", "caret"), dot, name, el("span", "svc", s.service + (n ? " · " + plural(n, "log") : "")),
+      el("span", "dur", s.end ? fmtDur(msBetween(s.start, s.end)) : "unfinished"), info);
+    const lane = el("div", "lane");
+    const bar = el("div", "bar" + (s.error ? " err" : "") + (s.end ? "" : " open"));
+    bar.dataset.span = s.id;
+    const left = pct(s.start);
+    bar.style.left = left + "%";
+    bar.style.width = Math.max(pct(s.end || model.end) - left, 0) + "%";
+    bar.style.background = s.end ? svcColor(s.service) : "linear-gradient(90deg, " + svcColor(s.service) + ", transparent)";
+    lane.append(bar);
+    for (const l of ticked(s)) lane.append(logTick(l, pct(l.time), listed));
+    row.append(tree, lane);
+    frag.append(row);
+  }
+  const spanless = model.logsWithoutSpan(g);
+  if (spanless.length) {
+    const row = el("div", "row");
+    const tree = el("div", "tree");
+    tree.style.paddingLeft = "8px";
+    tree.append(el("span", "caret"), el("span", "sname nospan", "Logs without a span"), el("span", "svc", plural(spanless.length, "log")));
+    const lane = el("div", "lane");
+    for (const l of spanless) lane.append(logTick(l, pct(l.time), listed));
+    row.append(tree, lane);
+    frag.append(row);
+  }
+  return frag;
+}
+
+function sectionOpen(g) {
+  if (state.open.has(g.key)) return state.open.get(g.key);
+  if (!g.spans.length && !g.logs.length) return false;
+  // Small scenarios are fully open; large ones open only the failed step and the step from the link.
+  return model.unattr || model.steps.length <= EXPAND_ALL_LIMIT || (g.kind === "step" && (g.st.status === "failed" || state.step === g.st.number));
+}
+
+/** A step, a hook (dashed frame; scenario hooks only with "Show hooks" on) or the "outside windows" group of Unattributed: header, error of a failed step, waterfall. */
+function renderSection(g, listed) {
+  const isStep = g.kind === "step";
+  const st = g.st;
+  const empty = !g.spans.length && !g.logs.length;
+  const open = sectionOpen(g);
+  const sec = el("section", "a-sec " + (isStep ? st.status : "hook") + (isStep && state.step === st.number ? " hl" : ""));
+  sec.dataset.sec = g.key;
+  const f = state.filter;
+  const head = el("div", "a-head" + (isStep && f && f.kind === "step" && f.n === st.number ? " sel" : ""));
+  if (isStep) head.dataset.step = st.number; else head.dataset.toggle = g.key;
+  const caret = el("span", "caret", empty ? "" : open ? "▾" : "▸");
+  if (!empty) caret.dataset.toggle = g.key;
+  const txt = el("span", "txt");
+  const outside = g.kind === "outside";
+  if (isStep) txt.append(el("span", "kw", st.keyword), document.createTextNode(" "), el("span", "txt", st.text));
+  else if (outside) txt.append(el("span", "kw hook", "outside windows"), document.createTextNode(" "), el("span", "txt", "telemetry between hooks and scenarios"));
+  else txt.append(el("span", "kw hook", g.h.hookType), document.createTextNode(" "), el("span", "txt", g.h.name));
+  head.append(caret, isStep ? el("span", "st " + st.status, STATUS_MARK[st.status] || "·") : outside ? el("span", "st", "◌") : el("span", "st hook", "◇"), txt);
+  const warns = g.logs.filter((l) => l.sev >= SEV_WARN && l.sev < SEV_ERROR).length;
+  const errs = g.spans.filter((s) => s.error).length + g.logs.filter((l) => l.sev >= SEV_ERROR).length;
+  if (errs || warns) {
+    const marks = el("span", "marks");
+    if (errs) marks.append(el("span", "e", "● " + errs), document.createTextNode(" "));
+    if (warns) marks.append(document.createTextNode("● " + warns));
+    head.append(marks);
+  }
+  head.append(el("span", "meta", (outside ? "" : fmtOff(Math.max(0, msBetween(model.origin, g.start))) + " · " + fmtDur(msBetween(g.start, g.end)) + " · ") +
+    (empty ? "no telemetry" : plural(g.spans.length, "span") + " · " + plural(g.logs.length, "log"))));
+  sec.append(head);
+  if (isStep && st.error) {
+    const box = el("div", "errbox");
+    box.append(el("b", "", "✗ Step failed"), el("pre", "", st.error));
+    sec.append(box);
+  }
+  if (open && !empty) sec.append(renderWaterfall(g, listed));
+  return sec;
+}
+
+/** Rebuilds the sections in place; their scroll position stays. */
+function renderSections() {
+  const top = document.querySelector(".top");
+  if (!top) return;
+  const scroll = top.scrollTop;
+  const listed = new Set(paneSelection().logs.map((l) => l.id));
+  top.replaceChildren(...model.windows.map((g) => renderSection(g, listed)));
+  if (model.unattr) { if (!model.windows.length) top.append(el("div", "empty", "No windows.")); }
+  else if (!model.steps.length) top.append(el("div", "empty", model.s.error || "This scenario has no steps."));
+  top.scrollTop = scroll;
+}
+
+// ---------- log pane ----------
+
+/** Rebuilds the log pane; its scroll resets only when its content changed (another filter, scope or level). */
+function renderPane(reset) {
+  const pane = document.querySelector(".pane");
+  if (!pane) return;
+  const box = pane.querySelector(".scroll");
+  const scroll = box.scrollTop;
+  const { logs, title } = paneSelection();
+  const hd = pane.querySelector(".hd");
+  const b = el("b", "", title);
+  b.title = title;
+  hd.replaceChildren(b, el("span", "svc", plural(logs.length, "log")));
+  if (state.filter) {
+    const all = el("button", "chip", "× show all");
+    all.dataset.unpick = "";
+    hd.append(all);
+  } else hd.append(el("span", "svc", "click a step or a span to filter"));
+
+  box.replaceChildren();
+  if (!logs.length) box.append(el("div", "empty", "No logs."));
+  else {
+    const table = el("table", "logs");
+    for (const l of logs) {
+      const tr = el("tr", l.level + (state.detail && state.detail.id === l.id ? " sel" : ""));
+      tr.dataset.log = l.id;
+      const sp = l.spanId && SPANS.get(l.spanId);
+      const src = el("td", "src", l.service + " · ");
+      if (sp) src.append(sp.name); else src.append(el("i", "", "no span"));
+      src.append(el("br"), shortCategory(l.scope.name));
+      src.title = l.scope.name || "";
+      const lvl = el("td", "t");
+      lvl.append(el("span", "lvl " + l.level, l.level));
+      const lines = l.body.split("\n");
+      const msg = el("td", "msg mono", lines[0]);
+      if (lines.length > 1) msg.append(el("span", "more", "\n" + lines.slice(1).join("\n")));
+      tr.append(el("td", "t mono", fmtOff(msBetween(model.origin, l.time))), lvl, src, msg);
+      table.append(tr);
+    }
+    box.append(table);
+  }
+  box.scrollTop = reset ? 0 : scroll;
+}
+
+// ---------- properties column ----------
+
+function kvTable(obj) {
+  const entries = Object.entries(obj || {});
+  if (!entries.length) return el("div", "none", "none");
+  const t = el("table");
+  for (const [k, v] of entries) {
+    const tr = el("tr");
+    tr.append(el("td", "", k), el("td", "mono", v === null || v === undefined || v === "" ? "—" : String(v)));
+    t.append(tr);
+  }
+  return t;
+}
+function linkTo(text, spanId) {
+  const div = el("div", "link");
+  const a = el("a", "", text);
+  a.dataset.span = spanId;
+  div.append(a);
+  return div;
+}
+const scopeTable = (scope) => kvTable(Object.assign({ name: scope.name, version: scope.version || "—" }, attrs(scope.attributes)));
+function attributedTo(w) {
+  if (w && w.st) return "step " + w.st.number + ": " + w.st.keyword + " " + w.st.text;
+  if (w && w.h) return "hook " + w.h.hookType + ": " + w.h.name;
+  return model.unattr ? "outside hook windows" : "scenario, outside steps and hooks";
+}
+
+/** Renders the properties column for state.detail; its scroll resets, since another item is shown. */
+function renderDetail() {
+  const box = $("detail");
+  const d = state.detail;
+  const item = d && (d.kind === "span" ? SPANS.get(d.id) : LOGS.get(d.id));
+  box.classList.toggle("open", !!item);
+  box.replaceChildren();
+  box.scrollTop = 0;
+  if (!item) return;
+  const at = (t) => fmtOff(msBetween(model.origin, t));
+  const windowOf = (id) => model.windowOf.get(id);
+  const hd = el("div", "hd");
+  const close = el("button", "x", "×");
+  close.title = "Close (Esc)";
+  close.dataset.close = "";
+  const h3 = (text) => el("h3", "", text);
+  if (d.kind === "span") {
+    const s = item;
+    const status = s.raw.status || {};
+    hd.append(el("b", "", s.name), close);
+    box.append(hd, h3("Span"), kvTable({
+      service: s.service,
+      kind: KIND_NAMES[s.raw.kind || 0] || s.raw.kind,
+      status: (STATUS_NAMES[status.code || 0] || status.code) + (status.message ? ": " + status.message : ""),
+      start: at(s.start),
+      duration: s.end ? fmtDur(msBetween(s.start, s.end)) : "unfinished (endTimeUnixNano = 0)",
+      "attributed to": attributedTo(windowOf(s.id)),
+      traceId: s.traceId, spanId: s.id, parentSpanId: s.parent || "—",
+    }));
+    if (s.parent && SPANS.has(s.parent)) box.append(linkTo("→ parent span: " + SPANS.get(s.parent).name, s.parent));
+    box.append(h3("Attributes"), kvTable(attrs(s.raw.attributes)), h3("Events"));
+    if ((s.raw.events || []).length) {
+      for (const e of s.raw.events) {
+        const ev = el("div", "ev");
+        ev.append(el("b", "", e.name), " ", el("span", "mono", at(nano(e.timeUnixNano))));
+        box.append(ev, kvTable(attrs(e.attributes)));
+      }
+    } else box.append(el("div", "none", "none"));
+    if ((s.raw.links || []).length) {
+      box.append(h3("Links"));
+      for (const k of s.raw.links) box.append(kvTable(Object.assign({ traceId: k.traceId, spanId: k.spanId }, attrs(k.attributes))));
+    }
+    box.append(h3("Resource"), kvTable(s.resource), h3("Scope"), scopeTable(s.scope));
+  } else {
+    const l = item;
+    const sp = l.spanId && SPANS.get(l.spanId);
+    hd.append(el("b", "", l.level + " · " + (l.scope.name || l.service)), close);
+    box.append(hd, h3("Body"), el("pre", "", l.body), h3("Log"), kvTable({
+      service: l.service,
+      severity: l.level,
+      time: at(l.time),
+      category: l.scope.name,
+      "attributed to": attributedTo(windowOf(l.id)),
+      traceId: l.traceId || "—", spanId: l.spanId || "—",
+    }));
+    if (sp) box.append(linkTo("→ span: " + sp.name, sp.id));
+    box.append(h3("Attributes"), kvTable(attrs(l.raw.attributes)), h3("Resource"), kvTable(l.resource), h3("Scope"), scopeTable(l.scope));
+  }
+}
+
+// ---------- body ----------
+
+function renderBody() {
+  const body = $("body");
+  body.replaceChildren();
+  const tools = el("div", "sec-tools");
+  const expand = el("button", "chip", "Expand all");
+  expand.dataset.allsec = "1";
+  const collapse = el("button", "chip", "Collapse all");
+  collapse.dataset.allsec = "0";
+  tools.append(expand, collapse, el("span", "", model.steps.length > EXPAND_ALL_LIMIT
+    ? "Large scenario: only the failed and the linked steps are open by default." : ""));
+  const pane = el("div", "pane");
+  pane.append(el("div", "hd"), el("div", "scroll"));
+  body.append(renderOverview(), tools, el("div", "top"), pane);
+  renderSections();
+  renderPane(true);
+}
+
+/** Scrolls to the step from the link, or else to the failed step. */
+function revealStep() {
+  const sec = document.querySelector(".a-sec.hl") || document.querySelector(".a-sec.failed");
+  if (sec) sec.scrollIntoView({ block: "nearest" });
+}
+
+/** A global setting changed: rebuild what depends on it, keeping scroll positions where the content stayed. */
+function refresh(paneChanged) {
+  model = buildModel(state.view);
+  renderHead();
+  const ov = document.querySelector(".ov");
+  if (ov) ov.replaceWith(renderOverview());
+  renderSections();
+  renderPane(paneChanged);
+}
+
+function setFilter(filter) {
+  state.filter = filter;
+  renderSections();
+  renderPane(true);
+}
+
+function setDetail(detail) {
+  state.detail = detail;
+  renderDetail();
+  // Selection marks only: the sections and the pane keep their scroll.
+  document.querySelectorAll(".row[data-row]").forEach((r) => r.classList.toggle("sel",
+    (!!detail && detail.id === r.dataset.row) || (!!state.filter && state.filter.id === r.dataset.row)));
+  document.querySelectorAll("table.logs tr").forEach((r) => r.classList.toggle("sel", !!detail && detail.id === r.dataset.log));
+}
+
+// ---------- routing and events ----------
+
+function route() {
+  const prev = state.view;
+  const h = readHash();
+  state.view = h.view;
+  state.step = h.step;
+  if (prev !== state.view) {
+    // Another scenario: everything starts afresh.
+    state.open = new Map();
+    state.detail = null;
+    state.filter = null;
+  }
+  // A step from the link (or a click on its header) filters the pane by that step and opens its section.
+  if (state.step != null) { state.filter = { kind: "step", n: state.step }; state.open.set("s" + state.step, true); }
+  else if (state.filter && state.filter.kind === "step") state.filter = null;
+  if (prev !== state.view) {
+    model = buildModel(state.view);
+    renderSide();
+    renderHead();
+    renderBody();
+    renderDetail();
+  } else {
+    document.querySelectorAll(".ov .seg-step").forEach((s) => s.classList.toggle("hl", Number(s.dataset.step) === state.step));
+    setFilter(state.filter);
+  }
+  revealStep();
+}
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-go],[data-scope],[data-unpick],[data-allsec],[data-toggle],[data-pick],[data-step],[data-log],[data-span],[data-close]");
+  if (!t) return;
+  const ds = t.dataset;
+  if (ds.go) go(ds.go);
+  else if (ds.scope) { state.scope = ds.scope; refresh(!!state.filter && state.filter.kind === "span"); }
+  else if ("unpick" in ds) { if (state.step != null) go(state.view, null); else setFilter(null); }
+  else if (ds.allsec) { model.windows.forEach((g) => state.open.set(g.key, ds.allsec === "1")); renderSections(); }
+  else if (ds.toggle) {
+    const g = model.windows.find((x) => x.key === ds.toggle);
+    state.open.set(g.key, !sectionOpen(g));
+    renderSections();
+  }
+  else if (ds.pick) setFilter(state.filter && state.filter.id === ds.pick ? null : { kind: "span", id: ds.pick });
+  else if (ds.step) { const n = Number(ds.step); go(state.view, state.step === n ? null : n); }
+  else if (ds.log) setDetail({ kind: "log", id: ds.log });
+  else if (ds.span) setDetail({ kind: "span", id: ds.span });
+  else if ("close" in ds) setDetail(null);
+});
+
+document.addEventListener("change", (e) => {
+  if (e.target.id === "minLevel") { state.minSev = Number(e.target.value); refresh(true); }
+  if (e.target.id === "hooks") { state.showHooks = e.target.checked; refresh(true); }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && state.detail) setDetail(null);
+});
+
+// Hovering a log (row or tick) lights up all its representations, the row of its span and a time cursor in the
+// section of its tick; hovering one side scrolls the other to it.
+let hotId = null;
+document.addEventListener("mouseover", (e) => {
+  const t = e.target.closest && e.target.closest("[data-log]");
+  const id = t ? t.dataset.log : null;
+  if (id === hotId) return;
+  hotId = id;
+  document.querySelectorAll(".hot").forEach((x) => x.classList.remove("hot"));
+  document.querySelectorAll(".cursor").forEach((c) => c.remove());
+  if (!id) return;
+  document.querySelectorAll('[data-log="' + id + '"]').forEach((x) => x.classList.add("hot"));
+  const l = LOGS.get(id);
+  if (l && l.spanId) document.querySelectorAll('[data-row="' + l.spanId + '"]').forEach((x) => x.classList.add("hot"));
+  const tick = document.querySelector('.ltick[data-log="' + id + '"]');
+  if (tick) {
+    tick.closest(".a-sec").querySelectorAll(".row:not(.axis) .lane").forEach((lane) => {
+      const c = el("div", "cursor");
+      c.style.left = tick.style.left;
+      lane.append(c);
+    });
+    if (!t.classList.contains("ltick")) tick.scrollIntoView({ block: "nearest" });
+  }
+  if (t.classList.contains("ltick")) {
+    const row = document.querySelector('tr[data-log="' + id + '"]');
+    if (row) row.scrollIntoView({ block: "nearest" });
+  }
+});
+
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>

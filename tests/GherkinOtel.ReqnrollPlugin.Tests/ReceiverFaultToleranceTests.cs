@@ -58,7 +58,7 @@ public class ReceiverFaultToleranceTests
         var good = await http.PostAsync(logsUrl, Proto(request.ToByteArray()));
 
         Assert.That(good.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        Assert.That(store.SnapshotLogs().Single().Message, Is.EqualTo("ok"));
+        Assert.That(store.Snapshot().Logs.Single().Message, Is.EqualTo("ok"));
     }
 
     [TestCase("v1/logs")]

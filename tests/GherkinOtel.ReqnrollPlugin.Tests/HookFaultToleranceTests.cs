@@ -6,77 +6,42 @@ namespace GherkinOtel.ReqnrollPlugin.Tests;
 
 public class HookFaultToleranceTests
 {
-    private sealed class FakeOutput(bool failOnAttachment) : IReqnrollOutputHelper
+    private sealed class FakeOutput(bool failOnWrite) : IReqnrollOutputHelper
     {
         public List<string> Lines { get; } = [];
-        public List<string> Attachments { get; } = [];
 
-        public void WriteLine(string message) => Lines.Add(message);
-        public void WriteLine(string format, params object[] args) => Lines.Add(string.Format(format, args));
-
-        public void AddAttachment(string filePath)
+        public void WriteLine(string message)
         {
-            if (failOnAttachment) throw new IOException("attachment storage is broken");
-            Attachments.Add(filePath);
+            if (failOnWrite) throw new IOException("output is broken");
+            Lines.Add(message);
         }
+
+        public void WriteLine(string format, params object[] args) => WriteLine(string.Format(format, args));
+
+        public void AddAttachment(string filePath) => throw new NotSupportedException("the plugin attaches no files");
     }
 
     [Test]
-    public async Task Attachment_failure_is_written_to_test_output_and_does_not_throw()
+    public void Receiver_errors_are_flushed_to_test_output_after_the_scenario()
     {
-        var output = new FakeOutput(failOnAttachment: true);
-        var hooks = new TelemetryHooks(output, new TelemetryStore(), new PluginOptions(TimeSpan.Zero), new RunWindows(), new PluginDiagnostics());
-        hooks.OpenWindow();
-
-        await hooks.AttachScenarioTelemetry();
-
-        Assert.That(output.Lines, Has.Some.Contain("attachment storage is broken"));
-    }
-
-    [Test]
-    public async Task Receiver_errors_are_flushed_to_test_output_after_the_scenario()
-    {
-        var output = new FakeOutput(failOnAttachment: false);
+        var output = new FakeOutput(failOnWrite: false);
         var diagnostics = new PluginDiagnostics();
-        var hooks = new TelemetryHooks(output, new TelemetryStore(), new PluginOptions(TimeSpan.Zero), new RunWindows(), diagnostics);
+        var hooks = new TelemetryHooks(output, diagnostics, new ScenarioState());
         diagnostics.Report("rejected invalid OTLP request");
         hooks.OpenWindow();
 
-        await hooks.AttachScenarioTelemetry();
+        hooks.FlushDiagnostics();
 
         Assert.That(output.Lines, Has.Some.Contain("rejected invalid OTLP request"));
-        Assert.That(output.Attachments, Has.Count.EqualTo(1));
     }
 
     [Test]
-    public async Task Scenario_window_is_recorded_so_that_it_is_excluded_from_the_run_remainder()
+    public void Broken_output_does_not_fail_the_scenario()
     {
-        var output = new FakeOutput(failOnAttachment: false);
-        var windows = new RunWindows();
-        var hooks = new TelemetryHooks(output, new TelemetryStore(), new PluginOptions(TimeSpan.Zero), windows, new PluginDiagnostics());
+        var diagnostics = new PluginDiagnostics();
+        diagnostics.Report("rejected invalid OTLP request");
+        var hooks = new TelemetryHooks(new FakeOutput(failOnWrite: true), diagnostics, new ScenarioState());
 
-        hooks.OpenWindow();
-        await hooks.AttachScenarioTelemetry();
-
-        Assert.That(windows.Snapshot(), Has.Count.EqualTo(1));
-    }
-
-    [Test]
-    public async Task Step_slice_attachment_contains_spans_of_the_step_with_times_relative_to_scenario_start()
-    {
-        var output = new FakeOutput(failOnAttachment: false);
-        var store = new TelemetryStore();
-        var hooks = new TelemetryHooks(output, store, new PluginOptions(TimeSpan.Zero), new RunWindows(), new PluginDiagnostics());
-        hooks.OpenWindow();
-        await Task.Delay(1100);
-        hooks.OpenStepWindow();
-        store.AddSpans([new TelemetrySpan("t1", "s1", null, "POST /orders", "orders-api", SpanKind.Server,
-            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, SpanStatus.Unset, new Dictionary<string, string>())]);
-
-        await hooks.AttachStepSlice();
-
-        var text = await File.ReadAllTextAsync(output.Attachments.Single());
-        Assert.That(text, Does.Contain("POST /orders"));
-        Assert.That(text, Does.Match(@"^\+1\.\d{3}s"), "time must be relative to scenario start, not step start");
+        Assert.DoesNotThrow(hooks.FlushDiagnostics);
     }
 }

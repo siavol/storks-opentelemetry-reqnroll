@@ -43,8 +43,9 @@ public class OtlpReceiverTests
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(receiver.Endpoint.IsLoopback, Is.True);
-        var log = store.SnapshotLogs().Single();
-        Assert.That(log, Is.EqualTo(new TelemetryLog(when, "orders-api", LogSeverity.Warning, "Orders.Cat", "pricing failed")));
+        var log = store.Snapshot().Logs.Single();
+        Assert.That(log, Is.EqualTo(new TelemetryLog(when, "orders-api", LogSeverity.Warning, "Orders.Cat", "pricing failed") { Id = "0.0.0.0" }),
+            "id: position request.resource.scope.record among the received requests");
     }
 
     [Test]
@@ -82,7 +83,7 @@ public class OtlpReceiverTests
         var response = await http.PostAsync(new Uri(receiver.Endpoint, "v1/traces"), content);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        var mapped = store.SnapshotSpans().Single();
+        var mapped = store.Snapshot().Spans.Single();
         Assert.That(mapped.TraceId, Is.EqualTo("0102030405060708090a0b0c0d0e0f10"));
         Assert.That(mapped.SpanId, Is.EqualTo("0102030405060708"));
         Assert.That(mapped.ParentSpanId, Is.EqualTo("0b0c0d0e0f101112"));

@@ -1,6 +1,6 @@
 # dotnet-gherkin-otel
 
-Reqnroll-плагин, который прикладывает к отчёту телеметрию SUT (трейсы и логи по OTLP) под каждым сценарием и шагом.
+Reqnroll-плагин, который собирает телеметрию SUT (трейсы и логи по OTLP) за прогон и показывает её по сценариям и шагам в Telemetry Viewer рядом с отчётом Reqnroll; в отчёте у каждого шага и сценария ссылка на просмотрщик.
 
 Нужны .NET 11 SDK и Docker (Postgres поднимается через Aspire).
 
@@ -23,6 +23,4 @@ dotnet test tests/App.Specs.ReportChecks             # проверка арте
 
 Без красного сценария: `dotnet test tests/App.Specs --filter "TestCategory!=demo-failure"`.
 
-Отчёты: `tests/App.Specs/bin/Debug/net11.0/reports/` (`reqnroll_report.html`, `reqnroll_report.ndjson`, `unattributed-telemetry.txt`).
-
-Пауза перед формированием вложений: `GHERKINOTEL_SETTLE_PAUSE_MS` (по умолчанию 250).
+Отчёты: `tests/App.Specs/bin/Debug/net11.0/reports/` (`reqnroll_report.html`, `reqnroll_report.ndjson`, `telemetry.html` — Telemetry Viewer, `traces.jsonl` и `logs.jsonl` — вся телеметрия прогона в OTLP/JSON Lines). Папку переопределяет `GHERKINOTEL_REPORT_DIR`.
