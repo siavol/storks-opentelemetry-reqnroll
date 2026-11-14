@@ -90,20 +90,8 @@ Open `reqnroll_report.html` and follow **Open telemetry** on a step, or open `te
 
 ## How it works
 
-```mermaid
-flowchart LR
-    subgraph tests["Test process (dotnet test)"]
-        scenarios["Reqnroll scenarios"]
-        plugin["Plugin: Observation Windows"]
-        receiver["OTLP receiver<br/>127.0.0.1:random port"]
-        scenarios -- "scenario and step start/end" --> plugin
-        receiver --> plugin
-    end
-    sut["Your SUT"] -- "traces and logs<br/>OTLP/HTTP protobuf" --> receiver
-    plugin -- "end of run" --> files["reports/<br/>telemetry.html<br/>traces.jsonl, logs.jsonl"]
-    scenarios -- "HTML formatter" --> report["reqnroll_report.html"]
-    report -. "Open telemetry links" .-> files
-```
+<!-- Generated from docs/images/how-it-works.mmd, see CONTRIBUTING.md. A PNG, because nuget.org renders no Mermaid. -->
+![The SUT sends traces and logs over OTLP/HTTP to the plugin's receiver inside the test process; the plugin takes scenario and step start and end from the Reqnroll scenarios and, at the end of the run, writes telemetry.html, traces.jsonl and logs.jsonl to the reports folder, where the Open telemetry links of reqnroll_report.html lead](https://raw.githubusercontent.com/OWNER/storks-opentelemetry-reqnroll/main/docs/images/how-it-works.png)
 
 1. **Receiver.** When the test run starts, the plugin starts an OTLP/HTTP (protobuf) receiver inside the test process, on a random port of `127.0.0.1`. It accepts traces and logs; metrics are accepted and dropped.
 2. **Exporter settings.** `ITelemetryEndpoint.GetExporterEnvironment()` returns the variables that send the SUT's OTLP exporter there:

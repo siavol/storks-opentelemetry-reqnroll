@@ -94,6 +94,14 @@ The environment variable `STORKS_OTEL_REPORT_DIR` overrides the folder.
 
 `App.Specs.ReportChecks` verifies these artifacts automatically (the report, the OTLP/JSON files and the viewer index). Still, when you change the viewer or Attribution, open `reqnroll_report.html` in a browser, follow a step's link and check that `telemetry.html` shows the expected spans and logs.
 
+## README images
+
+The README is also the package's page on nuget.org, which renders neither Mermaid nor relative image paths. So its images are PNG files in `docs/images/`, referenced by absolute `raw.githubusercontent.com` URLs. The "How it works" diagram is generated from `docs/images/how-it-works.mmd`; after changing it, regenerate the PNG with the [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) and commit both:
+
+```sh
+npx -p @mermaid-js/mermaid-cli@11.4.2 mmdc -i docs/images/how-it-works.mmd -o docs/images/how-it-works.png -s 2 -b white
+```
+
 ## Style and analyzers
 
 Formatting and analyzer rules are enforced by the build, so review is not spent on style:
