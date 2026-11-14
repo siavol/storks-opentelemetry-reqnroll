@@ -7,7 +7,7 @@ using Storks.OpenTelemetry.Reqnroll;
 
 namespace Storks.OpenTelemetry.Reqnroll;
 
-public sealed class StorksPlugin : IRuntimePlugin
+internal sealed class StorksPlugin : IRuntimePlugin
 {
     public void Initialize(
         RuntimePluginEvents runtimePluginEvents,

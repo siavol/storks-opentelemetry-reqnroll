@@ -6,7 +6,7 @@ namespace Storks.OpenTelemetry.Reqnroll;
 /// Plugin-internal errors raised outside a test context (e.g. by the receiver thread). They are
 /// queued here and written to the test output by the next hook; they never fail a scenario.
 /// </summary>
-public sealed class PluginDiagnostics
+internal sealed class PluginDiagnostics
 {
     private readonly ConcurrentQueue<string> _messages = new();
 

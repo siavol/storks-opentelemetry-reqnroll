@@ -91,7 +91,7 @@ Formatting and analyzer rules are enforced by the build, so review is not spent 
 
 - `.editorconfig` holds the style rules; `EnforceCodeStyleInBuild` and `AnalysisLevel=latest-recommended` (set for every project in `Directory.Build.props`) turn them and the .NET analyzers into build diagnostics.
 - CI builds with warnings as errors. Fix warnings instead of suppressing them; a targeted suppression needs a comment explaining why. The existing ones are in `.editorconfig` (test projects: `CA1707` for sentence-style test names, `CA1861` for inline expected values) and `samples/Aspire/AppHost/AppHost.csproj` (`ASPIRE010`).
-- The public API is tracked by `Microsoft.CodeAnalysis.PublicApiAnalyzers` (`PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt` in the package project). Adding or changing a public member without updating these files breaks the build. Every public member needs XML documentation.
+- The public API is only `ITelemetryEndpoint`; every other type in the package is `internal` (the unit tests see them through `InternalsVisibleTo`, and Reqnroll discovers internal `[Binding]` classes, so hook classes stay internal too). The contract is tracked by `Microsoft.CodeAnalysis.PublicApiAnalyzers` in `src/Storks.OpenTelemetry.Reqnroll/PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt`: adding, changing or removing a public member without updating these files fails the build (`RS0016`/`RS0017`). New members go to `PublicAPI.Unshipped.txt`; on release they move to `PublicAPI.Shipped.txt`. The package project generates its XML documentation file, so an undocumented public member fails the build too (`CS1591`).
 
 Before opening a PR, run what CI runs:
 

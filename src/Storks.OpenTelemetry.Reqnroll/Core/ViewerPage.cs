@@ -11,7 +11,7 @@ namespace Storks.OpenTelemetry.Reqnroll;
 /// <c>traces.jsonl</c> and <c>logs.jsonl</c>. Logs in the index are referred to by <see cref="TelemetryLog.Id"/>, which the
 /// OTLP receiver sets to the position of the record in <c>otlp-logs</c>.
 /// </summary>
-public static class ViewerPage
+internal static class ViewerPage
 {
     private const string IndexPlaceholder = "__RUN_INDEX__";
     private const string TracesPlaceholder = "__OTLP_TRACES__";
@@ -46,6 +46,6 @@ public static class ViewerPage
     private static string JsonArray(IEnumerable<Google.Protobuf.IMessage> requests) =>
         ScriptSafe("[" + string.Join(",", requests.Select(OtlpJson.Serialize)) + "]");
 
-    /// <summary>In JSON '&lt;' occurs only inside strings, where < means the same; so no "&lt;/script" or "&lt;!--" can appear.</summary>
+    /// <summary>In JSON '&lt;' occurs only inside strings, where &lt; means the same; so no "&lt;/script" or "&lt;!--" can appear.</summary>
     private static string ScriptSafe(string json) => json.Replace("<", "\\u003c");
 }

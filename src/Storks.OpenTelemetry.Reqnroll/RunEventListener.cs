@@ -20,7 +20,7 @@ internal sealed class ReqnrollLinkWriter(IReqnrollOutputHelper output) : ILinkWr
 /// not on a hook. Records the run (steps, hooks, statuses, windows) and writes the step link.
 /// Never throws: errors go to <see cref="PluginDiagnostics"/>.
 /// </summary>
-public sealed class RunEventListener(RunTracker tracker, RunRecord record, PluginDiagnostics diagnostics) : IAsyncExecutionEventListener
+internal sealed class RunEventListener(RunTracker tracker, RunRecord record, PluginDiagnostics diagnostics) : IAsyncExecutionEventListener
 {
     /// <summary>
     /// Start of the hook running now. The listener belongs to one test thread, and its hooks (run, feature and scenario

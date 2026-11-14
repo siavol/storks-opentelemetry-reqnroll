@@ -8,7 +8,7 @@ namespace Storks.OpenTelemetry.Reqnroll;
 /// goes to the Telemetry Viewer at the end of the run (<see cref="RunHooks"/>). Never changes the scenario result.
 /// </summary>
 [Binding]
-public sealed class TelemetryHooks(IReqnrollOutputHelper output, PluginDiagnostics diagnostics, ScenarioState state)
+internal sealed class TelemetryHooks(IReqnrollOutputHelper output, PluginDiagnostics diagnostics, ScenarioState state)
 {
     /// <summary>Order of the plugin's AfterScenario hooks: close the window, write the scenario link, flush diagnostics.</summary>
     internal const int CloseWindowOrder = int.MaxValue - 2, ScenarioLinkOrder = int.MaxValue - 1, FlushDiagnosticsOrder = int.MaxValue;

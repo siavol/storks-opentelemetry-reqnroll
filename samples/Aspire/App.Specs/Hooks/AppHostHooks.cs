@@ -22,10 +22,10 @@ public static class AppHostHooks
         foreach (var name in new[] { "orders-api", "pricing-api" })
         {
             builder.CreateResourceBuilder<ProjectResource>(name)
-                .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", telemetry.Endpoint.ToString().TrimEnd('/'))
-                .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
-                .WithEnvironment("OTEL_BLRP_SCHEDULE_DELAY", "100")
-                .WithEnvironment("OTEL_BSP_SCHEDULE_DELAY", "100");
+                .WithEnvironment(context =>
+                {
+                    foreach (var (key, value) in telemetry.GetExporterEnvironment()) context.EnvironmentVariables[key] = value;
+                });
         }
         _app = await builder.BuildAsync();
         await _app.StartAsync();

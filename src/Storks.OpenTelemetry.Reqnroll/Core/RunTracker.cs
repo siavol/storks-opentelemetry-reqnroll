@@ -1,7 +1,7 @@
 namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>Writes a link into the test report as a log message of the step or hook currently running.</summary>
-public interface ILinkWriter
+internal interface ILinkWriter
 {
     void WriteLink(string link);
 }
@@ -10,7 +10,7 @@ public interface ILinkWriter
 /// Records the run and hands out links. Reqnroll-independent so it can be tested directly.
 /// Failures are reported through <see cref="PluginDiagnostics"/> and never propagate: they must not change a result.
 /// </summary>
-public sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics)
+internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics)
 {
     private static readonly string PluginAssembly = typeof(RunTracker).Assembly.GetName().Name!;
 

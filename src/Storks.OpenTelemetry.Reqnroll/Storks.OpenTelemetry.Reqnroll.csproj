@@ -4,13 +4,20 @@
     <!-- Reqnroll runtime plugin convention: assembly name ends with .ReqnrollPlugin -->
     <AssemblyName>Storks.OpenTelemetry.ReqnrollPlugin</AssemblyName>
     <RootNamespace>Storks.OpenTelemetry.Reqnroll</RootNamespace>
+    <!-- XML docs ship in the package; CS1591 makes an undocumented public member a build error under -warnaserror. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- The public contract is PublicAPI.Shipped.txt + PublicAPI.Unshipped.txt; any other API change fails the build (RS0016/RS0017). -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+    <InternalsVisibleTo Include="Storks.OpenTelemetry.Reqnroll.Tests" />
+  </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Reqnroll" />
     <PackageReference Include="Google.Protobuf" />
     <EmbeddedResource Include="Viewer/telemetry.viewer.html" LogicalName="Storks.OpenTelemetry.Reqnroll.Viewer.telemetry.viewer.html" />
     <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
-    <Protobuf Include="Protos/**/*.proto" ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/**/*.proto" ProtoRoot="Protos" GrpcServices="None" Access="Internal" />
   </ItemGroup>
 </Project>

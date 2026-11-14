@@ -16,12 +16,13 @@ namespace Storks.OpenTelemetry.Reqnroll;
 /// In-process OTLP/HTTP protobuf receiver (Telemetry Source). Listens on a dynamic loopback port.
 /// Accepts logs at POST /v1/logs and traces at POST /v1/traces; other signals are acknowledged and dropped.
 /// </summary>
-public sealed class OtlpReceiver : IAsyncDisposable
+internal sealed class OtlpReceiver : IAsyncDisposable
 {
     private readonly TelemetryStore _store;
     private readonly Action<string>? _onError;
     private WebApplication? _app;
 
+    /// <param name="store">Receives every accepted span and log.</param>
     /// <param name="onError">Receives a description of every rejected or failed request (e.g. to write it to test output).</param>
     public OtlpReceiver(TelemetryStore store, Action<string>? onError = null)
     {

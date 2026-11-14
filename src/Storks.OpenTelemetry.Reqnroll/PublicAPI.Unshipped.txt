@@ -1,0 +1,4 @@
+#nullable enable
+Storks.OpenTelemetry.Reqnroll.ITelemetryEndpoint
+Storks.OpenTelemetry.Reqnroll.ITelemetryEndpoint.Endpoint.get -> System.Uri!
+Storks.OpenTelemetry.Reqnroll.ITelemetryEndpoint.GetExporterEnvironment() -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!

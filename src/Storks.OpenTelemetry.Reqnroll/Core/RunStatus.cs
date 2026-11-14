@@ -1,7 +1,7 @@
 namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>Statuses of scenarios, steps and hooks in the run record and the index, as Cucumber names them.</summary>
-public static class RunStatus
+internal static class RunStatus
 {
     public const string Passed = "passed";
     public const string Failed = "failed";

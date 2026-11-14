@@ -4,7 +4,7 @@ namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>End-of-run work: writes the Telemetry Viewer page and the OTLP/JSON files, and stops the receiver. Never fails the run.</summary>
 [Binding]
-public static class RunHooks
+internal static class RunHooks
 {
     // Runs after the test project's own AfterTestRun hooks (default order 10000), so that telemetry
     // flushed by the SUT while shutting down is still received. No pause is needed here: stopping the AppHost
