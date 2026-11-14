@@ -154,6 +154,7 @@ dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
   - **Lint workflows:** `actionlint`, then `zizmor`, over `.github/`.
   - **Build** (`build.yml`, on ubuntu and windows): locked restore (on windows the samples restore unlocked, see [Dependencies](#dependencies)), `dotnet format --verify-no-changes`, build with warnings as errors, unit tests with coverage; on ubuntu also `dotnet pack`, uploaded as the `packages` artifact.
   - **E2E** (`e2e.yml`, ubuntu): the Aspire sample in local package mode on that nupkg, then the report checks. The run must end with exactly the `@demo-failure` scenario red; any other failure fails the job.
+  - **SonarCloud:** code analysis with the unit-test coverage of the build; the quality gate is the badge in the README. Skipped for PRs from forks (and Dependabot PRs), which do not get the `SONAR_TOKEN` secret.
   - **Reqnroll 3.0.0 / 3.\***: the unit tests on the minimum and on the latest Reqnroll 3.x (see [Dependencies](#dependencies)).
   - A newer push to a PR cancels its outdated run.
 
