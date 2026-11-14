@@ -1,0 +1,44 @@
+<Project>
+  <!--
+    Central Package Management: every package version lives here, csproj files carry no Version.
+    Versions shared by a package family are properties so the family moves together.
+    ReqnrollVersion can be overridden from the command line (-p:ReqnrollVersion=3.x.y) to build and test
+    against another Reqnroll.
+    The only version outside this file is the Aspire.AppHost.Sdk MSBuild SDK: MSBuild resolves SDKs before
+    any property is evaluated, so it is pinned in global.json ("msbuild-sdks") and must match AspireVersion.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <ReqnrollVersion Condition="'$(ReqnrollVersion)' == ''">3.3.4</ReqnrollVersion>
+    <AspireVersion>13.6.5</AspireVersion>
+    <OpenTelemetryVersion>1.21.0</OpenTelemetryVersion>
+  </PropertyGroup>
+
+  <!-- Plugin -->
+  <ItemGroup>
+    <PackageVersion Include="Reqnroll" Version="$(ReqnrollVersion)" />
+    <PackageVersion Include="Google.Protobuf" Version="3.36.1" />
+    <PackageVersion Include="Grpc.Tools" Version="2.83.0" />
+  </ItemGroup>
+
+  <!-- Tests -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageVersion Include="NUnit" Version="4.4.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="5.2.0" />
+    <PackageVersion Include="Reqnroll.NUnit" Version="$(ReqnrollVersion)" />
+  </ItemGroup>
+
+  <!-- Aspire sample -->
+  <ItemGroup>
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(AspireVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="11.0.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
+  </ItemGroup>
+</Project>

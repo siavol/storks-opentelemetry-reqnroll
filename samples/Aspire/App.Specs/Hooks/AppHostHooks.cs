@@ -1,8 +1,8 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
-using Storks.OpenTelemetry.Reqnroll;
 using Reqnroll;
+using Storks.OpenTelemetry.Reqnroll;
 
 namespace App.Specs.Hooks;
 

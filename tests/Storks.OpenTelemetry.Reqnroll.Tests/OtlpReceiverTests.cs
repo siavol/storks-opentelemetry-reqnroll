@@ -1,14 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
 using Google.Protobuf;
-using Storks.OpenTelemetry.Reqnroll;
 using NUnit.Framework;
 using OpenTelemetry.Proto.Collector.Logs.V1;
+using OpenTelemetry.Proto.Collector.Trace.V1;
 using OpenTelemetry.Proto.Common.V1;
 using OpenTelemetry.Proto.Logs.V1;
 using OpenTelemetry.Proto.Resource.V1;
-using OpenTelemetry.Proto.Collector.Trace.V1;
 using OpenTelemetry.Proto.Trace.V1;
+using Storks.OpenTelemetry.Reqnroll;
 
 namespace Storks.OpenTelemetry.Reqnroll.Tests;
 

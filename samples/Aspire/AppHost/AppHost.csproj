@@ -1,10 +1,17 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Aspire.AppHost.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsAspireHost>true</IsAspireHost>
+    <!--
+      Run DCP and the dashboard from their NuGet packages, not from the Aspire CLI bundle, so that
+      `dotnet test` works on a machine (or CI runner) with only the .NET SDK and Docker installed.
+      ASPIRE010 only reports that this choice was made; the sample needs no bundle-only feature.
+    -->
+    <AspireUseCliBundle>false</AspireUseCliBundle>
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <ProjectReference Include="..\Orders.Api\Orders.Api.csproj" />
     <ProjectReference Include="..\Pricing.Api\Pricing.Api.csproj" />
   </ItemGroup>

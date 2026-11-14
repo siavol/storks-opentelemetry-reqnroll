@@ -62,7 +62,7 @@ public class ReqnrollReportTests
 
         foreach (var scenario in new[] { Red, Green })
         {
-            var id = messages.TelemetryLinks(scenario).First().Link.Split('#')[1].Split('&')[0].Substring(2);
+            var id = messages.TelemetryLinks(scenario)[0].Link.Split('#')[1].Split('&')[0].Substring(2);
             Assert.That(html, Does.Contain(id), scenario);
         }
         Assert.That(html, Does.Contain("\"status\":\"failed\""));

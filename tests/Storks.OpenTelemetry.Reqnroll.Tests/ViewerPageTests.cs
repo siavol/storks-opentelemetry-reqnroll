@@ -49,12 +49,16 @@ public class ViewerPageTests
         resource.Resource.Attributes.Add(new KeyValue { Key = "service.name", Value = new AnyValue { StringValue = "orders-api" } });
         var scope = new ScopeLogs { Scope = new InstrumentationScope { Name = "Orders.Program" } };
         foreach (var (body, nanos) in records)
+        {
             scope.LogRecords.Add(new LogRecord
             {
-                TimeUnixNano = nanos, SeverityNumber = SeverityNumber.Warn, SeverityText = "Warning",
+                TimeUnixNano = nanos,
+                SeverityNumber = SeverityNumber.Warn,
+                SeverityText = "Warning",
                 Body = new AnyValue { StringValue = body },
                 SpanId = ByteString.CopyFrom(new byte[8] { 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8 }),
             });
+        }
         resource.ScopeLogs.Add(scope);
         var request = new ExportLogsServiceRequest();
         request.ResourceLogs.Add(resource);
@@ -121,7 +125,7 @@ public class ViewerPageTests
             Is.EqualTo("</script><script>alert(2)</script>"), "escaped, but the value survives");
         Assert.That(html, Does.Not.Contain("fetch(").And.Not.Contain("XMLHttpRequest"));
         Assert.That(html, Does.Not.Match(@"(src|href)\s*=\s*""https?:"), "must work offline");
-        Assert.That(Regex.Matches(html, "<script>").Count, Is.EqualTo(1), "exactly one executable script element");
+        Assert.That(Regex.Count(html, "<script>"), Is.EqualTo(1), "exactly one executable script element");
     }
 
     [Test]

@@ -55,5 +55,5 @@ public class OrdersTests
         Assert.That(read, Is.EqualTo(order));
     }
 
-    private record OrderDto(Guid Id, string Sku, int Quantity, decimal UnitPrice, decimal Total);
+    private sealed record OrderDto(Guid Id, string Sku, int Quantity, decimal UnitPrice, decimal Total);
 }

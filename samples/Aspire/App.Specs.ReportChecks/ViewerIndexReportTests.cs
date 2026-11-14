@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
@@ -43,12 +44,12 @@ public class ViewerIndexReportTests
     /// <summary>The index entry of the When step of the scenario, found through its link in the Reqnroll report.</summary>
     private static JsonNode WhenStep(string html, string scenarioName)
     {
-        var link = CucumberMessages.Load().TelemetryLinks(scenarioName).Single(l => l.StepText?.StartsWith("the customer orders") == true).Link;
+        var link = CucumberMessages.Load().TelemetryLinks(scenarioName).Single(l => l.StepText?.StartsWith("the customer orders", StringComparison.Ordinal) == true).Link;
         var hash = link.Split('#')[1].Split('&').Select(p => p.Split('=')).ToDictionary(p => p[0], p => p[1]);
 
         var scenario = DataBlock(html, "run-index")["features"]!.AsArray()
             .SelectMany(f => f!["scenarios"]!.AsArray()).Single(s => (string?)s!["id"] == hash["s"])!;
-        var step = scenario["steps"]!.AsArray().Single(s => (int)s!["number"]! == int.Parse(hash["step"]))!;
+        var step = scenario["steps"]!.AsArray().Single(s => (int)s!["number"]! == int.Parse(hash["step"], CultureInfo.InvariantCulture))!;
         Assert.That((string?)step["keyword"], Is.EqualTo("When"));
         return step;
     }
@@ -105,7 +106,7 @@ public class ViewerIndexReportTests
         var stepSpans = step["spanIds"]!.AsArray().Select(id => spans[(string)id!]).ToList();
 
         // OTLP span kind: 2 = Server, 3 = Client.
-        var post = stepSpans.Single(s => s.Service == "orders-api" && (int?)s.Span["kind"] == 2 && ((string?)s.Span["name"])?.StartsWith("POST") == true);
+        var post = stepSpans.Single(s => s.Service == "orders-api" && (int?)s.Span["kind"] == 2 && ((string?)s.Span["name"])?.StartsWith("POST", StringComparison.Ordinal) == true);
         var trace = stepSpans.Where(s => (string?)s.Span["traceId"] == (string?)post.Span["traceId"]).ToList();
         Assert.That(trace, Has.Some.Matches<(JsonNode Span, string Service)>(s => s.Service == "orders-api" && (int?)s.Span["kind"] == 3), "no Orders client call");
         Assert.That(trace, Has.Some.Matches<(JsonNode Span, string Service)>(s =>
@@ -186,7 +187,7 @@ public class ViewerIndexReportTests
         Assert.That(beforeTestRun["logIds"]!.AsArray().Select(id => Body(Log(html, (string)id!).Log)),
             Has.Some.Contains("Application started"), "the AppHost start is in the BeforeTestRun window");
         Assert.That(hooks.Select(h => ((string?)h!["hookType"], (string?)h["name"])), Does.Contain(("AfterTestRun", "AppHostHooks.StopAppHost")));
-        Assert.That(ulong.Parse((string)un["startUnixNano"]!), Is.LessThanOrEqualTo(ulong.Parse((string)beforeTestRun["startUnixNano"]!)), "the run scale starts before its first hook");
+        Assert.That(ulong.Parse((string)un["startUnixNano"]!, CultureInfo.InvariantCulture), Is.LessThanOrEqualTo(ulong.Parse((string)beforeTestRun["startUnixNano"]!, CultureInfo.InvariantCulture)), "the run scale starts before its first hook");
     }
 
     [Test]
@@ -204,7 +205,7 @@ public class ViewerIndexReportTests
             Assert.That(hook["spanIds"]!.AsArray().Select(id => spans[(string)id!]), Has.Some.Matches<(JsonNode Span, string Service)>(s =>
                 s.Service == "orders-api" && Attribute(s.Span, "http.response.status_code") == "404"), $"{name}: the readiness request is not in the hook window");
             var first = scenario["steps"]![0]!;
-            Assert.That(ulong.Parse((string)hook["endUnixNano"]!), Is.LessThan(ulong.Parse((string)first["startUnixNano"]!)),
+            Assert.That(ulong.Parse((string)hook["endUnixNano"]!, CultureInfo.InvariantCulture), Is.LessThan(ulong.Parse((string)first["startUnixNano"]!, CultureInfo.InvariantCulture)),
                 $"{name}: the hook window overlaps the first step");
         }
     }

@@ -1,3 +1,5 @@
+using Pricing.Api;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
@@ -8,7 +10,7 @@ app.MapGet("/prices/{sku}", (string sku, ILogger<Program> logger) =>
 {
     if (sku == "BROKEN-1")
     {
-        logger.LogError("Pricing failed for SKU {Sku}", sku);
+        Log.PricingFailed(logger, sku);
         return Results.Problem(detail: $"Pricing is broken for {sku}", statusCode: StatusCodes.Status500InternalServerError);
     }
 
@@ -16,7 +18,5 @@ app.MapGet("/prices/{sku}", (string sku, ILogger<Program> logger) =>
 });
 
 app.Run();
-
-public record PriceResponse(string Sku, decimal Price);
 
 public partial class Program;

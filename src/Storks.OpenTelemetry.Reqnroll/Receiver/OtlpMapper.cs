@@ -22,22 +22,24 @@ internal static class OtlpMapper
             var resourceLogs = request.ResourceLogs[ri];
             var service = ServiceName(resourceLogs.Resource);
             for (var si = 0; si < resourceLogs.ScopeLogs.Count; si++)
-            for (var li = 0; li < resourceLogs.ScopeLogs[si].LogRecords.Count; li++)
             {
-                var scope = resourceLogs.ScopeLogs[si];
-                var record = scope.LogRecords[li];
-                var nanos = record.TimeUnixNano != 0 ? record.TimeUnixNano : record.ObservedTimeUnixNano;
-                yield return new TelemetryLog(
-                    FromNanos(nanos),
-                    service,
-                    MapSeverity(record.SeverityNumber),
-                    scope.Scope?.Name ?? "",
-                    Format(record.Body),
-                    Hex(record.TraceId),
-                    Hex(record.SpanId))
+                for (var li = 0; li < resourceLogs.ScopeLogs[si].LogRecords.Count; li++)
                 {
-                    Id = LogId(requestIndex, ri, si, li),
-                };
+                    var scope = resourceLogs.ScopeLogs[si];
+                    var record = scope.LogRecords[li];
+                    var nanos = record.TimeUnixNano != 0 ? record.TimeUnixNano : record.ObservedTimeUnixNano;
+                    yield return new TelemetryLog(
+                        FromNanos(nanos),
+                        service,
+                        MapSeverity(record.SeverityNumber),
+                        scope.Scope?.Name ?? "",
+                        Format(record.Body),
+                        Hex(record.TraceId),
+                        Hex(record.SpanId))
+                    {
+                        Id = LogId(requestIndex, ri, si, li),
+                    };
+                }
             }
         }
     }
@@ -48,26 +50,28 @@ internal static class OtlpMapper
         {
             var service = ServiceName(resourceSpans.Resource);
             foreach (var scope in resourceSpans.ScopeSpans)
-            foreach (var span in scope.Spans)
             {
-                yield return new TelemetrySpan(
-                    Hex(span.TraceId)!,
-                    Hex(span.SpanId)!,
-                    Hex(span.ParentSpanId),
-                    span.Name,
-                    service,
-                    (SpanKind)(int)span.Kind,
-                    FromNanos(span.StartTimeUnixNano),
-                    span.EndTimeUnixNano == 0 ? null : FromNanos(span.EndTimeUnixNano),
-                    span.Status?.Code switch
-                    {
-                        global::OpenTelemetry.Proto.Trace.V1.Status.Types.StatusCode.Ok => SpanStatus.Ok,
-                        global::OpenTelemetry.Proto.Trace.V1.Status.Types.StatusCode.Error => SpanStatus.Error,
-                        _ => SpanStatus.Unset,
-                    },
-                    span.Attributes
-                        .GroupBy(a => a.Key)
-                        .ToDictionary(g => g.Key, g => Format(g.Last().Value)));
+                foreach (var span in scope.Spans)
+                {
+                    yield return new TelemetrySpan(
+                        Hex(span.TraceId)!,
+                        Hex(span.SpanId)!,
+                        Hex(span.ParentSpanId),
+                        span.Name,
+                        service,
+                        (SpanKind)(int)span.Kind,
+                        FromNanos(span.StartTimeUnixNano),
+                        span.EndTimeUnixNano == 0 ? null : FromNanos(span.EndTimeUnixNano),
+                        span.Status?.Code switch
+                        {
+                            global::OpenTelemetry.Proto.Trace.V1.Status.Types.StatusCode.Ok => SpanStatus.Ok,
+                            global::OpenTelemetry.Proto.Trace.V1.Status.Types.StatusCode.Error => SpanStatus.Error,
+                            _ => SpanStatus.Unset,
+                        },
+                        span.Attributes
+                            .GroupBy(a => a.Key)
+                            .ToDictionary(g => g.Key, g => Format(g.Last().Value)));
+                }
             }
         }
     }
@@ -93,7 +97,7 @@ internal static class OtlpMapper
     private static string Format(AnyValue? v) => v?.ValueCase switch
     {
         AnyValue.ValueOneofCase.StringValue => v.StringValue,
-        AnyValue.ValueOneofCase.IntValue => v.IntValue.ToString(),
+        AnyValue.ValueOneofCase.IntValue => v.IntValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
         AnyValue.ValueOneofCase.DoubleValue => v.DoubleValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
         AnyValue.ValueOneofCase.BoolValue => v.BoolValue.ToString(),
         null or AnyValue.ValueOneofCase.None => "",
