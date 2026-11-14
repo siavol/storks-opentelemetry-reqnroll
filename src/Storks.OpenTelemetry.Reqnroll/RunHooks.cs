@@ -10,7 +10,7 @@ internal static class RunHooks
     // flushed by the SUT while shutting down is still received. No pause is needed here: stopping the AppHost
     // waits for the SUT processes, which export what they have before exiting (ticket 09, demo run).
     [AfterTestRun(Order = int.MaxValue)]
-    public static async Task FinishRun(OtlpReceiver receiver, TelemetryStore store, RunRecord record, PluginDiagnostics diagnostics)
+    public static async Task FinishRun(OtlpReceiver receiver, TelemetryStore store, RunRecord record, PluginDiagnostics diagnostics, RunTracker tracker)
     {
         var directory = ReportDirectory.Resolve();
         try
@@ -43,5 +43,6 @@ internal static class RunHooks
         }
 
         foreach (var message in diagnostics.Drain()) Console.Error.WriteLine($"[Storks.OpenTelemetry] {message}");
+        if (tracker.WindowOverlapSummary() is { } summary) Console.Error.WriteLine($"[Storks.OpenTelemetry] {summary}");
     }
 }

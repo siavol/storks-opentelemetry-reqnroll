@@ -184,7 +184,9 @@ public class OtlpJsonTests
             OtlpReceiver.StoreTraces(store, TraceRequest());
             await using var receiver = new OtlpReceiver(store);
 
-            Assert.DoesNotThrowAsync(() => RunHooks.FinishRun(receiver, store, new RunRecord(), new PluginDiagnostics()));
+            var record = new RunRecord();
+            var diagnostics = new PluginDiagnostics();
+            Assert.DoesNotThrowAsync(() => RunHooks.FinishRun(receiver, store, record, diagnostics, new RunTracker(record, diagnostics)));
         }
         finally { Environment.SetEnvironmentVariable(ReportDirectory.Variable, old); }
     }

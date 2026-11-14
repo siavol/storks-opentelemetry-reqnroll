@@ -78,4 +78,66 @@ public class RunTrackerTests
             new HookRun("BeforeFeature", "FeatureHooks.Seed", T0.AddSeconds(6), T0.AddSeconds(7), "passed"),
         }));
     }
+
+    [Test]
+    public void Window_opened_while_another_is_open_warns_with_both_scenarios_and_the_readme_section()
+    {
+        var diagnostics = new PluginDiagnostics();
+        var record = new RunRecord();
+        var tracker = new RunTracker(record, diagnostics);
+        var checkout = record.Begin("Checkout", "Pay by card", [], T0);
+        var pricing = record.Begin("Pricing", "Apply discount", [], T0);
+
+        tracker.WindowOpened(checkout, T0);
+        tracker.WindowOpened(pricing, T0.AddMilliseconds(10));
+
+        var warning = diagnostics.Drain().Single();
+        Assert.That(warning, Does.Contain("Window Overlap")
+            .And.Contain("'Pricing: Apply discount'")
+            .And.Contain("'Checkout: Pay by card'")
+            .And.Contain("README.md#window-overlap"));
+        Assert.That(pricing.Start, Is.EqualTo(T0.AddMilliseconds(10)), "the window is opened as before");
+    }
+
+    [Test]
+    public void Windows_one_after_another_give_no_warning_and_no_summary()
+    {
+        var diagnostics = new PluginDiagnostics();
+        var record = new RunRecord();
+        var tracker = new RunTracker(record, diagnostics);
+        var first = record.Begin("Checkout", "Pay by card", [], T0);
+        var second = record.Begin("Checkout", "Pay by card", [], T0);
+
+        tracker.WindowOpened(first, T0);
+        tracker.WindowClosed(first, T0.AddMilliseconds(5));
+        tracker.WindowOpened(second, T0.AddMilliseconds(6));
+        tracker.WindowClosed(second, T0.AddMilliseconds(9));
+
+        Assert.That(diagnostics.Drain(), Is.Empty);
+        Assert.That(tracker.WindowOverlapSummary(), Is.Null);
+        Assert.That(first.End, Is.EqualTo(T0.AddMilliseconds(5)), "the window is closed as before");
+    }
+
+    [Test]
+    public void Summary_counts_the_windows_that_opened_into_an_overlap()
+    {
+        var diagnostics = new PluginDiagnostics();
+        var record = new RunRecord();
+        var tracker = new RunTracker(record, diagnostics);
+        var a = record.Begin("F", "A", [], T0);
+        var b = record.Begin("F", "B", [], T0);
+        var c = record.Begin("F", "C", [], T0);
+        var d = record.Begin("F", "D", [], T0);
+
+        tracker.WindowOpened(a, T0);
+        tracker.WindowOpened(b, T0.AddMilliseconds(1));   // overlaps A
+        tracker.WindowClosed(a, T0.AddMilliseconds(2));
+        tracker.WindowOpened(c, T0.AddMilliseconds(3));   // overlaps B
+        tracker.WindowClosed(b, T0.AddMilliseconds(4));
+        tracker.ScenarioFinished(c, T0.AddMilliseconds(5), "failed", "boom"); // closing hook did not run
+        tracker.WindowOpened(d, T0.AddMilliseconds(6));   // alone
+
+        Assert.That(diagnostics.Drain(), Has.Count.EqualTo(2));
+        Assert.That(tracker.WindowOverlapSummary(), Does.Contain("Window Overlap: 2 scenario windows").And.Contain("README.md#window-overlap"));
+    }
 }

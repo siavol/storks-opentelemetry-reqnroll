@@ -10,8 +10,10 @@ internal interface ILinkWriter
 /// Records the run and hands out links. Reqnroll-independent so it can be tested directly.
 /// Failures are reported through <see cref="PluginDiagnostics"/> and never propagate: they must not change a result.
 /// </summary>
-internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics)
+internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics, WindowOverlap overlap)
 {
+    public RunTracker(RunRecord record, PluginDiagnostics diagnostics) : this(record, diagnostics, new WindowOverlap()) { }
+
     private static readonly string PluginAssembly = typeof(RunTracker).Assembly.GetName().Name!;
 
     public void StepFinished(ScenarioRun run, ILinkWriter writer, string keyword, string text,
@@ -39,6 +41,37 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
         catch (Exception ex) { diagnostics.Report($"failed to record hook '{hook.Name}': {ex.Message}"); }
     }
 
+    /// <summary>Opens the scenario's Observation Window and warns about Window Overlap (Attribution is unchanged).</summary>
+    public void WindowOpened(ScenarioRun run, DateTimeOffset start)
+    {
+        run.OpenWindow(start);
+        try
+        {
+            if (overlap.Opened(run) is { } warning) diagnostics.Report(warning);
+        }
+        catch (Exception ex) { diagnostics.Report($"failed to check Window Overlap of scenario '{run.Name}': {ex.Message}"); }
+    }
+
+    /// <summary>Closes the scenario's Observation Window, before the plugin's own AfterScenario hooks.</summary>
+    public void WindowClosed(ScenarioRun run, DateTimeOffset end)
+    {
+        run.CloseWindow(end);
+        LeaveOverlapCheck(run);
+    }
+
+    /// <summary>The one end-of-run line about Window Overlap, or null when no windows overlapped.</summary>
+    public string? WindowOverlapSummary()
+    {
+        try { return overlap.Summary(); }
+        catch (Exception ex) { return $"failed to summarize Window Overlap: {ex.Message}"; }
+    }
+
+    private void LeaveOverlapCheck(ScenarioRun run)
+    {
+        try { overlap.Closed(run); }
+        catch (Exception ex) { diagnostics.Report($"failed to check Window Overlap of scenario '{run.Name}': {ex.Message}"); }
+    }
+
     public void WriteScenarioLink(ScenarioRun run, ILinkWriter writer) =>
         Write(writer, TelemetryLinks.Scenario(run.Id), $"scenario '{run.Name}'");
 
@@ -46,6 +79,8 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
     {
         try { run.Finish(end, status, error); }
         catch (Exception ex) { diagnostics.Report($"failed to record scenario '{run.Name}': {ex.Message}"); }
+        // A scenario whose closing hook did not run must not count as running for the rest of the run.
+        LeaveOverlapCheck(run);
     }
 
     private void Write(ILinkWriter writer, string link, string what)
