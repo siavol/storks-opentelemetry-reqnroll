@@ -89,24 +89,26 @@ The environment variable `STORKS_OTEL_REPORT_DIR` overrides the folder.
 
 Formatting and analyzer rules are enforced by the build, so review is not spent on style:
 
-- `.editorconfig` holds the style rules; `EnforceCodeStyleInBuild` and `AnalysisLevel=latest-recommended` turn them and the .NET analyzers into build diagnostics.
-- CI builds with warnings as errors. Fix warnings instead of suppressing them; a targeted suppression needs a comment explaining why.
+- `.editorconfig` holds the style rules; `EnforceCodeStyleInBuild` and `AnalysisLevel=latest-recommended` (set for every project in `Directory.Build.props`) turn them and the .NET analyzers into build diagnostics.
+- CI builds with warnings as errors. Fix warnings instead of suppressing them; a targeted suppression needs a comment explaining why. The existing ones are in `.editorconfig` (test projects: `CA1707` for sentence-style test names, `CA1861` for inline expected values) and `samples/Aspire/AppHost/AppHost.csproj` (`ASPIRE010`).
 - The public API is tracked by `Microsoft.CodeAnalysis.PublicApiAnalyzers` (`PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt` in the package project). Adding or changing a public member without updating these files breaks the build. Every public member needs XML documentation.
 
 Before opening a PR, run what CI runs:
 
 ```sh
-dotnet format Storks.OpenTelemetry.Reqnroll.slnx --verify-no-changes
-dotnet build Storks.OpenTelemetry.Reqnroll.slnx -warnaserror
-dotnet test tests/Storks.OpenTelemetry.Reqnroll.Tests
+dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
+dotnet format Storks.OpenTelemetry.Reqnroll.slnx --verify-no-changes --no-restore
+dotnet build Storks.OpenTelemetry.Reqnroll.slnx -warnaserror --no-restore
+dotnet test tests/Storks.OpenTelemetry.Reqnroll.Tests --no-build
 ```
 
 `dotnet format Storks.OpenTelemetry.Reqnroll.slnx` without `--verify-no-changes` fixes formatting in place.
 
 ### Dependencies
 
-- All package versions live in one file, `Directory.Packages.props` (Central Package Management). Do not put `Version` on a `PackageReference` in a csproj; the samples pin a concrete Reqnroll version with `VersionOverride`.
-- Restore uses NuGet lock files (`packages.lock.json`), and CI restores in locked mode. After adding or updating a dependency, run `dotnet restore Storks.OpenTelemetry.Reqnroll.slnx` and commit the updated lock files. To check them the way CI does:
+- All package versions live in one file, `Directory.Packages.props` (Central Package Management). Do not put `Version` on a `PackageReference` in a csproj. Versions shared by a package family are properties there; the Reqnroll version is `ReqnrollVersion`, and `-p:ReqnrollVersion=3.x.y` builds against another Reqnroll (the lock files record the default version, so add `-p:RestoreLockedMode=false` and do not commit the lock files that restore rewrites).
+- `global.json` pins the .NET SDK and the `Aspire.AppHost.Sdk` MSBuild SDK. MSBuild resolves SDKs before reading properties, so when you update Aspire, change `AspireVersion` in `Directory.Packages.props` and `Aspire.AppHost.Sdk` in `global.json` together.
+- Restore uses NuGet lock files (`packages.lock.json`, one per project). When the environment variable `CI` is `true` (as on GitHub Actions), restore runs in locked mode and fails if a lock file is out of date. After adding or updating a dependency, run `dotnet restore Storks.OpenTelemetry.Reqnroll.slnx` and commit the updated lock files. To check them the way CI does:
 
 ```sh
 dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
