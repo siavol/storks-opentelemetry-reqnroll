@@ -188,7 +188,7 @@ public class OtlpJsonTests
 
             var record = new RunRecord();
             var diagnostics = new PluginDiagnostics();
-            Assert.DoesNotThrowAsync(() => RunHooks.FinishRun(receiver, store, record, diagnostics, new RunTracker(record, diagnostics),
+            await Assert.DoesNotThrowAsync(() => RunHooks.FinishRun(receiver, store, record, diagnostics, new RunTracker(record, diagnostics),
                 new RunOutput(TextWriter.Null, TextWriter.Null)));
         }
         finally { Environment.SetEnvironmentVariable(ReportDirectory.Variable, old); }
