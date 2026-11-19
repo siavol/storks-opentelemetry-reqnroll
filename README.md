@@ -91,7 +91,8 @@ Open `reqnroll_report.html` and follow **Open telemetry** on a step, or open `te
 
 ## How it works
 
-<!-- Generated from docs/images/how-it-works.mmd. A PNG, because nuget.org renders no Mermaid. -->
+<!-- Generated from docs/images/how-it-works.mmd. A PNG, because nuget.org renders no Mermaid. Regenerate:
+     npx -p @mermaid-js/mermaid-cli@11.4.2 mmdc -i docs/images/how-it-works.mmd -o docs/images/how-it-works.png -s 2 -b white -->
 ![The SUT sends traces and logs over OTLP/HTTP to the plugin's receiver inside the test process; the plugin takes scenario and step start and end from the Reqnroll scenarios and, at the end of the run, writes telemetry.html, traces.jsonl and logs.jsonl to the reports folder, where the Open telemetry links of reqnroll_report.html lead](https://raw.githubusercontent.com/siavol/storks-opentelemetry-reqnroll/main/docs/images/how-it-works.png)
 
 1. **Receiver.** When the test run starts, the plugin starts an OTLP/HTTP (protobuf) receiver inside the test process, on a random port of `127.0.0.1`. It accepts traces and logs; metrics are accepted and dropped.

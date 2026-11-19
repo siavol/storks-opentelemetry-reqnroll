@@ -1,3 +1,5 @@
+Follow [CODING_STANDARDS.md](CODING_STANDARDS.md) when writing or reviewing code.
+
 ## Agent skills
 
 ### Issue tracker

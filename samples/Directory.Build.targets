@@ -7,7 +7,8 @@
     edited and debugged (F5) without packing.
 
     UseLocalPackage=true (local package mode): the package is restored from the local feed of packed nupkg files
-    ($(StorksLocalFeed), default artifacts/packages), the way a user consumes it. Run `dotnet pack` first. In this mode:
+    ($(StorksLocalFeed), default artifacts/packages), the way a user consumes it. Run `dotnet pack src/Storks.OpenTelemetry.Reqnroll -o artifacts/packages`
+    first. In this mode:
     - packages are restored into a separate folder ($(StorksLocalRestoreDir)), so the global NuGet cache never
       supplies a stale build, and the plugin's copy there is deleted before every restore, so re-packing the
       same version is picked up too;
