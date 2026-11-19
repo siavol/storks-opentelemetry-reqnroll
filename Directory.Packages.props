@@ -12,7 +12,7 @@
   -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ReqnrollMinVersion>3.0.0</ReqnrollMinVersion>
+    <ReqnrollMinVersion>3.3.4</ReqnrollMinVersion>
     <ReqnrollVersion Condition="'$(ReqnrollVersion)' == ''">3.3.4</ReqnrollVersion>
     <AspireVersion>13.6.5</AspireVersion>
     <OpenTelemetryVersion>1.21.0</OpenTelemetryVersion>
@@ -21,8 +21,8 @@
   <!-- Plugin -->
   <ItemGroup>
     <PackageVersion Include="Reqnroll" Version="[$(ReqnrollMinVersion), 4.0)" />
-    <PackageVersion Include="Google.Protobuf" Version="3.36.1" />
-    <PackageVersion Include="Grpc.Tools" Version="2.83.0" />
+    <PackageVersion Include="Google.Protobuf" Version="3.36.2" />
+    <PackageVersion Include="Grpc.Tools" Version="2.85.0" />
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
 
@@ -33,9 +33,9 @@
 
   <!-- Tests -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
-    <PackageVersion Include="NUnit" Version="4.4.0" />
-    <PackageVersion Include="NUnit3TestAdapter" Version="5.2.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageVersion Include="NUnit" Version="5.0.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="6.3.1" />
     <PackageVersion Include="Reqnroll.NUnit" Version="$(ReqnrollVersion)" />
   </ItemGroup>
 
