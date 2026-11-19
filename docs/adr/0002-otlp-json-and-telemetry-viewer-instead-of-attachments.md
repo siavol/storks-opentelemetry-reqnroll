@@ -1,5 +1,7 @@
 # Standard OTLP/JSON and our own Telemetry Viewer next to the Reqnroll report instead of text in attachments
 
+_Superseded in part by [ADR 0003](0003-telemetry-formatter-instead-of-report-add-on.md): the viewer is no longer linked from the Reqnroll report._
+
 The plugin saves the run's telemetry to the report folder in the standard OTLP/JSON Lines format (`traces.jsonl`, `logs.jsonl`, as the OTLP File Exporter does), and it is meant to be viewed in our own viewer (the Telemetry Viewer, `telemetry.html`) next to the report. Text attachments on scenarios and steps are replaced by links to the viewer.
 
 The reason is the limitations of the Reqnroll HTML formatter: text attachments are shown without UTF-8 (Cyrillic and special characters get garbled), and HTML in attachments is not rendered, so the span tree with logs stays flat text.

@@ -25,15 +25,19 @@ The time interval of a scenario or step; telemetry that started within this inte
 _Avoid_: time range, timeframe, slot
 
 **Window Overlap**:
-The Observation Window of one scenario opening while another scenario's window is still open, as happens when scenarios run in parallel. Attribution goes by time only, so telemetry within the overlap shows up in each of the overlapping scenarios; the plugin warns about it in the test output.
+The Observation Window of one scenario opening while another scenario's window is still open, as happens when scenarios run in parallel. Attribution goes by time only, so telemetry within the overlap shows up in each of the overlapping scenarios; the Telemetry Formatter reports how many there were at the end of the run.
 _Avoid_: collision, parallel conflict
 
 **Step Slice**:
 The part of Scenario Telemetry that started within the Observation Window of one scenario step.
 _Avoid_: step telemetry
 
+**Telemetry Formatter**:
+The plugin as a Reqnroll formatter: it is switched on by its entry in the `formatters` configuration, alone or next to other formatters, and writes the Telemetry Viewer and the run's telemetry files. Switched off, it collects nothing and writes nothing.
+_Avoid_: reporter, add-on, extension
+
 **Telemetry Viewer**:
-The self-contained HTML page `telemetry.html` next to the Reqnroll report where the run's telemetry is viewed: Scenario Telemetry by scenario and step (a span waterfall, logs and properties on one timeline) and Unattributed Telemetry. The Reqnroll report itself only contains links to it.
+The self-contained HTML page (`telemetry.html` by default) that the Telemetry Formatter writes: a report of the run on its own, with Scenario Telemetry by feature, scenario and step (a span waterfall, logs and properties on one timeline) and Unattributed Telemetry. Other formatters' reports are left as they are.
 _Avoid_: dashboard, telemetry report, attachment
 
 **Unattributed Telemetry**:
