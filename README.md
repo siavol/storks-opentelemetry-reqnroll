@@ -91,7 +91,7 @@ Open `reqnroll_report.html` and follow **Open telemetry** on a step, or open `te
 
 ## How it works
 
-<!-- Generated from docs/images/how-it-works.mmd, see CONTRIBUTING.md. A PNG, because nuget.org renders no Mermaid. -->
+<!-- Generated from docs/images/how-it-works.mmd. A PNG, because nuget.org renders no Mermaid. -->
 ![The SUT sends traces and logs over OTLP/HTTP to the plugin's receiver inside the test process; the plugin takes scenario and step start and end from the Reqnroll scenarios and, at the end of the run, writes telemetry.html, traces.jsonl and logs.jsonl to the reports folder, where the Open telemetry links of reqnroll_report.html lead](https://raw.githubusercontent.com/siavol/storks-opentelemetry-reqnroll/main/docs/images/how-it-works.png)
 
 1. **Receiver.** When the test run starts, the plugin starts an OTLP/HTTP (protobuf) receiver inside the test process, on a random port of `127.0.0.1`. It accepts traces and logs; metrics are accepted and dropped.
@@ -151,15 +151,3 @@ Telemetry is attributed by its own timestamps at the end of the run, so a span t
 - The receiver stops after your `[AfterTestRun]` hooks. Whatever the SUT exports after that is lost. The helper shortens the exporters' batch delay to 100 ms; with the SDK defaults (5 s for spans) the last scenarios' telemetry would usually still be waiting in the SUT when it stops. Stop the SUT in your `[AfterTestRun]` hook, and stop it gracefully if you can, so that it flushes on exit.
 - Work the SUT does in the background after a step ends (queues, timers) starts in a later window, or outside every window, and is attributed there.
 - The files are written at the end of the run. A run that is aborted before its end writes no files.
-
-## Samples
-
-- [`samples/Aspire`](https://github.com/siavol/storks-opentelemetry-reqnroll/tree/main/samples/Aspire): two ASP.NET Core services and Postgres started with `Aspire.Hosting.Testing`, Reqnroll scenarios on NUnit, and one scenario (`@demo-failure`) that fails on purpose. The screenshot above is from it. How to run it is in [CONTRIBUTING.md](https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/CONTRIBUTING.md#the-aspire-sample).
-
-Planned: a SUT in Docker, an in-process SUT, Allure reports, and Attribution by trace context. The roadmap will be in GitHub Issues.
-
-## Contributing and license
-
-Build, test and PR instructions are in [CONTRIBUTING.md](https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/CONTRIBUTING.md). Terms such as Observation Window and Attribution are defined in [GLOSSARY.md](https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/GLOSSARY.md). To report a vulnerability, see [SECURITY.md](https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/SECURITY.md).
-
-Licensed under the [MIT License](https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/LICENSE).

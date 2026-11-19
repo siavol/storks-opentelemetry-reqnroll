@@ -9,7 +9,7 @@
 ## Checklist
 
 - [ ] The change is covered by tests, or the PR explains why not.
-- [ ] Formatting and a build with warnings as errors pass locally (see [CONTRIBUTING.md](../CONTRIBUTING.md#style-and-analyzers)).
+- [ ] Formatting and a build with warnings as errors pass locally.
 - [ ] Unit tests pass: `dotnet test tests/Storks.OpenTelemetry.Reqnroll.Tests`.
 - [ ] If the change touches the receiver, Attribution or the report: the Aspire sample and its report checks pass.
 - [ ] If the public API changed: the public API files are updated and every public member has XML docs.
