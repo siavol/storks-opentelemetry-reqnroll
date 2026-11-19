@@ -249,7 +249,7 @@ for (const request of data("otlp-traces")) {
   }
 }
 
-/** Log id of the index ("request.resource.scope.record": positions in otlp-logs) -> log. */
+/** Log id of the index -> log. The id is built as in OtlpMapper.LogId; change both together. */
 const LOGS = new Map();
 data("otlp-logs").forEach((request, qi) => (request.resourceLogs || []).forEach((rl, ri) => {
   const resource = attrs(rl.resource && rl.resource.attributes);
@@ -297,14 +297,8 @@ function go(view, step) {
 // ---------- model of the view on screen ----------
 
 /**
- * The view of a scenario or of Unattributed Telemetry, derived from the index and the global settings.
- * Scenario: windows are the steps and, with "Show hooks" on, the scenario hooks, in order of call. With hooks hidden, so is
- * the hook telemetry of the index (hookTelemetry: hook spans with their subtree and logs, spanless logs of hook windows);
- * a log written in a hook window for a span of a step stays with that span.
- * The scale runs from the first visible window start to the last window end, so the windows fill the overview.
- * Unattributed: windows are the run and feature hooks, always shown, and an "outside windows" group for the rest; the
- * scale runs from the run start. Either scale is stretched by telemetry that runs past it.
- * A log tick sits on the bar of its span; a log whose span is not shown sits on the "Logs without a span" row.
+ * What a scenario or Unattributed Telemetry shows under the global settings, derived in one place so that the overview,
+ * the sections and the log pane always agree. Which telemetry "Show hooks" hides is decided by the index (hookTelemetry).
  */
 function buildModel(view) {
   const unattr = view === UNATTRIBUTED;
@@ -433,8 +427,7 @@ function renderHead() {
     b.append(el("span", "pill " + s.status, s.status), document.createTextNode(s.name));
     const sub = [model.entry.feature];
     if (s.tags.length) sub.push(s.tags.join(" "));
-    // From the first window start to the last window end of the windows on screen, i.e. the time the
-    // steps took (durationMs of the index) with hooks hidden, and with the hooks around them when they are shown.
+    // The time of the windows on screen, so that it grows with "Show hooks" as the overview does.
     const w = model.windows;
     const windowsMs = w.length
       ? msBetween(w[0].start, w.reduce((m, g) => (g.end > m ? g.end : m), w[0].end))

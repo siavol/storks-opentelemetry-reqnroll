@@ -8,10 +8,7 @@ internal static class ReqnrollScenario
 {
     public static ScenarioState State(IScenarioContext context) => context.ScenarioContainer.Resolve<ScenarioState>();
 
-    /// <summary>
-    /// The run of this scenario in the record, begun on first use (on ScenarioStartedEvent); the plugin's BeforeScenario
-    /// hook then opens its window (<see cref="TelemetryHooks.OpenWindow"/>).
-    /// </summary>
+    /// <summary>Begun on first use, since the listener and the hooks each may be first to need it.</summary>
     public static ScenarioRun Run(IScenarioContext context, RunRecord record)
     {
         var state = State(context);
@@ -23,7 +20,7 @@ internal static class ReqnrollScenario
         return run;
     }
 
-    /// <summary>Message and stack trace of a step error, as the report shows it.</summary>
+    /// <summary>As the Reqnroll report shows it, so the two read the same.</summary>
     public static string? ErrorText(Exception? error)
     {
         if (error is null) return null;

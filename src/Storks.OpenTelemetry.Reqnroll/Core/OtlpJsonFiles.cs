@@ -8,7 +8,6 @@ internal static class OtlpJsonFiles
     public const string TracesFileName = "traces.jsonl";
     public const string LogsFileName = "logs.jsonl";
 
-    /// <summary>Writes both files (empty if nothing was received) and returns the directory.</summary>
     public static string Write(string directory, TelemetryStore store)
     {
         Directory.CreateDirectory(directory);

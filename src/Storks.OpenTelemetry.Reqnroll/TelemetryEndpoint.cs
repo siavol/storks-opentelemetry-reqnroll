@@ -12,7 +12,7 @@ public interface ITelemetryEndpoint
     /// <summary>
     /// Environment variables that point a SUT's OpenTelemetry OTLP exporter at the receiver: the endpoint (without a
     /// trailing slash), the <c>http/protobuf</c> protocol, and span and log batch delays shortened to 100 ms so that
-    /// telemetry arrives before the scenario's Observation Window closes.
+    /// telemetry exported just before the end of the test run still arrives.
     /// </summary>
     /// <returns>
     /// A name-to-value map for anything that takes environment variables: an Aspire resource, <c>Process.Start</c>,
@@ -23,7 +23,7 @@ public interface ITelemetryEndpoint
 
 internal sealed class TelemetryEndpoint(Uri endpoint) : ITelemetryEndpoint
 {
-    // Exporter defaults are 5 s (spans) and 1 s (logs): too late for a scenario's Observation Window.
+    // Exporter defaults are 5 s (spans) and 1 s (logs): the last scenarios' telemetry would miss the end of the run.
     private const string BatchDelayMilliseconds = "100";
 
     public Uri Endpoint { get; } = endpoint;

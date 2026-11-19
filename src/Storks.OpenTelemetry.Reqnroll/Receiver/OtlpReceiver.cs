@@ -13,8 +13,8 @@ using Storks.OpenTelemetry.Reqnroll.Core;
 namespace Storks.OpenTelemetry.Reqnroll.Receiver;
 
 /// <summary>
-/// In-process OTLP/HTTP protobuf receiver (Telemetry Source). Listens on a dynamic loopback port.
-/// Accepts logs at POST /v1/logs and traces at POST /v1/traces; other signals are acknowledged and dropped.
+/// In-process OTLP/HTTP receiver (Telemetry Source) on a dynamic loopback port, so that parallel test runs never clash
+/// and nothing outside the machine can send to it.
 /// </summary>
 internal sealed class OtlpReceiver : IAsyncDisposable
 {
@@ -22,8 +22,6 @@ internal sealed class OtlpReceiver : IAsyncDisposable
     private readonly Action<string>? _onError;
     private WebApplication? _app;
 
-    /// <param name="store">Receives every accepted span and log.</param>
-    /// <param name="onError">Receives a description of every rejected or failed request (e.g. to write it to test output).</param>
     public OtlpReceiver(TelemetryStore store, Action<string>? onError = null)
     {
         _store = store;
@@ -36,7 +34,7 @@ internal sealed class OtlpReceiver : IAsyncDisposable
         catch { /* the error sink must never break the receiver */ }
     }
 
-    /// <summary>Shared path of every signal: read body, parse, store, respond. Errors are reported and never stop the receiver.</summary>
+    /// <summary>Errors are reported and never stop the receiver: one bad request must not lose the rest of the run.</summary>
     private async Task Handle<TRequest, TResponse>(HttpRequest request, string path, MessageParser<TRequest> parser,
         Action<TRequest> store, TResponse response)
         where TRequest : IMessage<TRequest>
@@ -63,11 +61,9 @@ internal sealed class OtlpReceiver : IAsyncDisposable
         }
     }
 
-    /// <summary>Keeps the accepted request as received and its neutral mapping; a log's id is its position among the received requests.</summary>
     public static void StoreLogs(TelemetryStore store, ExportLogsServiceRequest export) =>
         store.AddLogs(export, requestIndex => OtlpMapper.MapLogs(export, requestIndex));
 
-    /// <summary>Keeps the accepted request as received and its neutral mapping.</summary>
     public static void StoreTraces(TelemetryStore store, ExportTraceServiceRequest export) =>
         store.AddTraces(export, OtlpMapper.MapSpans(export));
 

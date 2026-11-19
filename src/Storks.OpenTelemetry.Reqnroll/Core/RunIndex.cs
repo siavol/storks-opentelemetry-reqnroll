@@ -3,14 +3,9 @@ using System.Text.Json;
 
 namespace Storks.OpenTelemetry.Reqnroll.Core;
 
-/// <summary>
-/// An Observation Window in the OTLP/JSON time format (<see cref="StartUnixNano"/>, <see cref="EndUnixNano"/>) and the
-/// telemetry attributed to it: <see cref="SpanIds"/> are the spans (OTLP span id, hex) that started in it, <see cref="LogIds"/>
-/// the logs (<see cref="TelemetryLog.Id"/>) written in it, both chronological.
-/// </summary>
+/// <summary>An Observation Window and its telemetry, in OTLP/JSON terms, so the viewer matches them to the embedded requests as they are.</summary>
 internal abstract record AttributedWindow(string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds);
 
-/// <summary>Ids of spans (OTLP span id, hex) and logs (<see cref="TelemetryLog.Id"/>), chronological.</summary>
 internal sealed record TelemetryIds(IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds);
 
 /// <summary>A step of a scenario run; its window does not include its BeforeStep and AfterStep hooks.</summary>
@@ -19,59 +14,35 @@ internal sealed record StepIndexEntry(
     string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds)
     : AttributedWindow(StartUnixNano, EndUnixNano, SpanIds, LogIds);
 
-/// <summary>
-/// A hook call of the test project (the plugin's own hooks are not recorded): a scenario hook, or a run or feature hook of
-/// Unattributed Telemetry. <see cref="Name"/> is <c>Class.Method</c>; <see cref="OffsetMs"/> is from the start of the
-/// scenario or of the run.
-/// </summary>
 internal sealed record HookIndexEntry(
     string HookType, string Name, string Status, long OffsetMs, long DurationMs,
     string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds)
     : AttributedWindow(StartUnixNano, EndUnixNano, SpanIds, LogIds);
 
-/// <summary>
-/// A scenario run; <see cref="DurationMs"/> is the time its steps took, from the first step start to the last step end
-/// (the whole window when it has no steps); <see cref="AttributedWindow.SpanIds"/> and <see cref="AttributedWindow.LogIds"/>
-/// are all spans and logs of its window (steps and hooks); <see cref="Hooks"/> are its scenario hook calls in order of call.
-/// <see cref="HookTelemetry"/> is what the viewer hides while "Show hooks" is off: the spans that started in hook windows
-/// with their subtree, the logs of those spans, and the logs written in hook windows that have no span of their own among
-/// the other spans of the scenario (a log of a step's span stays with its span even when written in a hook window).
-/// </summary>
 internal sealed record ScenarioIndexEntry(
     string Id, string Name, string Status, IReadOnlyList<string> Tags, long DurationMs, string? Error, IReadOnlyList<StepIndexEntry> Steps,
     IReadOnlyList<HookIndexEntry> Hooks, TelemetryIds HookTelemetry,
     string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds)
     : AttributedWindow(StartUnixNano, EndUnixNano, SpanIds, LogIds);
 
-/// <summary>
-/// Unattributed Telemetry: the spans and logs that started outside every scenario window, on the run's scale (the window
-/// runs from the run start to the end of its last window). <see cref="Hooks"/> are the run and feature hook calls of the
-/// test project by start time with the part of that telemetry that started in their windows; the rest lies outside any window.
-/// </summary>
 internal sealed record UnattributedIndexEntry(
     IReadOnlyList<HookIndexEntry> Hooks, string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds)
     : AttributedWindow(StartUnixNano, EndUnixNano, SpanIds, LogIds);
 
-/// <summary>A feature and its scenario runs.</summary>
 internal sealed record FeatureIndexEntry(string Name, IReadOnlyList<ScenarioIndexEntry> Scenarios);
 
 /// <summary>
-/// The attribution index embedded into the Telemetry Viewer page: features, scenario runs, steps, and which spans are
-/// attributed to each run and step, and the Unattributed Telemetry. Attribution rule: a span belongs
-/// to the window it started in, a log to the window it was written in (by its own time, regardless of its span).
+/// The attribution index embedded into the Telemetry Viewer page. A span belongs to the window it started in, a log to
+/// the window it was written in, by its own time and regardless of its span.
 /// </summary>
 internal sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, UnattributedIndexEntry Unattributed)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    /// <summary>Index of the whole run: scenario runs, and the run and feature hooks on the scale of Unattributed Telemetry.</summary>
-    /// <param name="record">The run's scenarios and hooks.</param>
-    /// <param name="spans">Received spans.</param>
-    /// <param name="logs">Received logs; those without an <see cref="TelemetryLog.Id"/> cannot be referenced and are left out.</param>
     public static RunIndex Build(RunRecord record, IReadOnlyList<TelemetrySpan>? spans = null, IReadOnlyList<TelemetryLog>? logs = null) =>
         Build(record.Snapshot(), record.RunHooks(), record.Start, spans, logs);
 
-    /// <summary>Index of scenario runs alone (no run hooks); the run's scale starts with its first scenario.</summary>
+    /// <summary>Without a run record, for tests of scenario Attribution alone.</summary>
     public static RunIndex Build(IReadOnlyList<ScenarioRun> runs, IReadOnlyList<TelemetrySpan>? spans = null, IReadOnlyList<TelemetryLog>? logs = null) =>
         Build(runs, [], runs.Count == 0 ? DateTimeOffset.UnixEpoch : runs.Min(r => r.Start), spans, logs);
 
@@ -86,13 +57,10 @@ internal sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, Unatt
         return new(features, UnattributedEntry(features, runs, runHooks, start, spanItems, logItems));
     }
 
-    /// <summary>A span (by start time, <see cref="Span"/> is its parent) or a log (by its time, <see cref="Span"/> is its span), reduced to what attribution needs.</summary>
+    /// <summary>A span or a log, reduced to what Attribution needs. <see cref="Span"/> is a span's parent, or a log's span.</summary>
     private readonly record struct Timed(string Id, DateTimeOffset Time, string? Span);
 
-    /// <summary>
-    /// Hands the spans and logs of an enclosing window out to the windows inside it, in order of the calls: windows inside
-    /// one window do not overlap, and should two share an instant, the earlier call keeps the item.
-    /// </summary>
+    /// <summary>Hands each item to one window only: windows that share an instant would otherwise both get it.</summary>
     private sealed class Attributor(IReadOnlyList<Timed> spans, IReadOnlyList<Timed> logs)
     {
         private readonly HashSet<string> _takenSpans = [];
@@ -113,11 +81,8 @@ internal sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, Unatt
             return new StepIndexEntry(s.Number, s.Keyword, s.Text, s.Status, Ms(s.Start - run.Start), Ms(s.End - s.Start), s.Error,
                 UnixNano(s.Start), UnixNano(s.End), stepSpans, stepLogs);
         }).ToList();
-        // Hook windows do not overlap step windows either; should they share an instant, the step keeps the item.
         var hooks = run.Hooks.Select(h => HookEntry(h, run.Start, attributor)).ToList();
-        // The duration in the viewer's scenario header: from the first step start to the last step end, without the hooks around them.
-        var duration = run.Steps.Count == 0 ? run.End - run.Start : run.Steps.Max(st => st.End) - run.Steps.Min(st => st.Start);
-        return new(run.Id, run.Name, run.Status, run.Tags, Ms(duration),
+        return new(run.Id, run.Name, run.Status, run.Tags, Ms(StepsDuration(run)),
             run.Error ?? run.Steps.FirstOrDefault(s => s.Error is not null)?.Error, steps, hooks, HookTelemetry(hooks, spansIn, logsIn),
             UnixNano(run.Start), UnixNano(run.End), Ids(spansIn), Ids(logsIn));
     }
@@ -136,9 +101,10 @@ internal sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, Unatt
         return new(hooks, UnixNano(start), UnixNano(end), Ids(restSpans), Ids(restLogs));
     }
 
-    /// <param name="h">The hook run to index.</param>
-    /// <param name="origin">Start of the scenario or of the run, for <see cref="HookIndexEntry.OffsetMs"/>.</param>
-    /// <param name="attributor">Assigns the hook's window its telemetry.</param>
+    /// <summary>The scenario's own time, without the hooks around its steps, which "Show hooks" may hide.</summary>
+    private static TimeSpan StepsDuration(ScenarioRun run) =>
+        run.Steps.Count == 0 ? run.End - run.Start : run.Steps.Max(st => st.End) - run.Steps.Min(st => st.Start);
+
     private static HookIndexEntry HookEntry(HookRun h, DateTimeOffset origin, Attributor attributor)
     {
         var (hookSpans, hookLogs) = attributor.Take(h.Start, h.End);
@@ -146,6 +112,10 @@ internal sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, Unatt
             UnixNano(h.Start), UnixNano(h.End), hookSpans, hookLogs);
     }
 
+    /// <summary>
+    /// What the viewer hides while "Show hooks" is off: hook spans with their subtree and their logs, and hook-window logs,
+    /// except a log of a shown span, which stays with that span.
+    /// </summary>
     private static TelemetryIds HookTelemetry(IReadOnlyList<HookIndexEntry> hooks, IReadOnlyList<Timed> spans, IReadOnlyList<Timed> logs)
     {
         var hookSpans = hooks.SelectMany(h => h.SpanIds).ToHashSet();
@@ -169,12 +139,12 @@ internal sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, Unatt
 
     private static List<string> Ids(IEnumerable<Timed> items) => items.Select(t => t.Id).ToList();
 
-    /// <summary>Whole milliseconds, never negative (a window is never before its origin, nor ends before it starts).</summary>
+    /// <summary>Never negative, should the test process's clock be adjusted during the run.</summary>
     private static long Ms(TimeSpan t) => Math.Max(0, (long)Math.Round(t.TotalMilliseconds));
 
     private static string UnixNano(DateTimeOffset t) =>
         ((t - DateTimeOffset.UnixEpoch).Ticks * 100).ToString(CultureInfo.InvariantCulture);
 
-    /// <summary>JSON with ASCII-only output ('&lt;', '&amp;' and non-ASCII are \u-escaped), safe to inline into a script element.</summary>
+    /// <summary>ASCII-only (the Web defaults escape '&lt;' and '&amp;'), so it is safe to inline into a script element.</summary>
     public string ToJson() => JsonSerializer.Serialize(this, Json);
 }

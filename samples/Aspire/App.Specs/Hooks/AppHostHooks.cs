@@ -35,8 +35,8 @@ public static class AppHostHooks
 
     /// <summary>
     /// Aspire reports orders-api healthy before it has finished starting (it still waits for Postgres and creates
-    /// the schema). Poll a cheap DB-touching request until Orders really answers, then give the exporters time to
-    /// flush, so that startup telemetry is not captured by the first scenario's window.
+    /// the schema). Poll a cheap DB-touching request until Orders really answers, then let it settle, so that work it still
+    /// does in the background after starting is not attributed to the first scenario.
     /// </summary>
     private static async Task WarmUpOrders()
     {
@@ -56,7 +56,7 @@ public static class AppHostHooks
             if (DateTimeOffset.UtcNow >= deadline) throw new TimeoutException("orders-api did not answer the warm-up request");
             await Task.Delay(500);
         }
-        await Task.Delay(TimeSpan.FromSeconds(1)); // exporters flush every 100 ms
+        await Task.Delay(TimeSpan.FromSeconds(1));
     }
 
     [AfterTestRun]

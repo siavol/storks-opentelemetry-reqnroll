@@ -41,7 +41,7 @@ internal sealed class StorksPlugin : IRuntimePlugin
 
         // An async listener, because output (the step link) written on StepFinishedEvent lands on the Gherkin step
         // itself; written from an AfterStep hook it would land on the hook's test step. Subscribed before
-        // CucumberMessagePublisher, so it runs first; tests/App.Specs.ReportChecks guard this order.
+        // CucumberMessagePublisher, so it runs first; samples/Aspire/App.Specs.ReportChecks guard this order.
         runtimePluginEvents.CustomizeTestThreadDependencies += (_, args) =>
         {
             var container = args.ObjectContainer;

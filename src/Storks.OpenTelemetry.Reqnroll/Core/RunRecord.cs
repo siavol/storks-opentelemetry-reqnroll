@@ -65,9 +65,7 @@ internal sealed class ScenarioRun
         _closed = true;
     }
 
-    /// <param name="end">End of the window unless <see cref="CloseWindow"/> has closed it already.</param>
-    /// <param name="status">Final status of the scenario.</param>
-    /// <param name="error">Error message of a failed scenario.</param>
+    /// <summary>Ends the window here only if the plugin's AfterScenario hook did not run.</summary>
     public void Finish(DateTimeOffset end, string status, string? error)
     {
         if (!_closed) End = end;

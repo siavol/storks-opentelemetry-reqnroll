@@ -25,11 +25,7 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
         Write(writer, TelemetryLinks.Step(run.Id, number), $"step '{text}'");
     }
 
-    /// <summary>
-    /// Records a finished hook call of the test project: a scenario hook on its <paramref name="run"/>, or, when
-    /// <paramref name="run"/> is null, a run or feature hook on the run record. The plugin's own hooks are not recorded
-    /// (<paramref name="assembly"/> is the hook's assembly name).
-    /// </summary>
+    /// <summary>Records the test project's hooks only: the plugin's own would show up as noise in every scenario.</summary>
     public void HookFinished(ScenarioRun? run, HookRun hook, string assembly)
     {
         if (assembly == PluginAssembly) return;
@@ -59,7 +55,6 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
         LeaveOverlapCheck(run);
     }
 
-    /// <summary>The one end-of-run line about Window Overlap, or null when no windows overlapped or the summary failed.</summary>
     public string? WindowOverlapSummary()
     {
         try { return _overlap.Summary(); }

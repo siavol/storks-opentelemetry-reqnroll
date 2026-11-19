@@ -6,16 +6,15 @@ using Storks.OpenTelemetry.Reqnroll.Core;
 
 namespace Storks.OpenTelemetry.Reqnroll.Receiver;
 
-/// <summary>OTLP protobuf -> neutral model. The only place that knows OTLP types.</summary>
+/// <summary>OTLP protobuf -> neutral model, which Attribution works on without knowing OTLP.</summary>
 internal static class OtlpMapper
 {
     /// <summary>
-    /// Id of a log record among the received log requests: its position "request.resourceLogs.scopeLogs.logRecords"
-    /// (all zero-based), so the viewer finds the record in the embedded OTLP/JSON array of requests.
+    /// A log's position among the received requests, so that the viewer finds the record in the embedded OTLP/JSON
+    /// without the index copying it. The viewer builds the same id; change both together.
     /// </summary>
     public static string LogId(int request, int resource, int scope, int record) => $"{request}.{resource}.{scope}.{record}";
 
-    /// <summary>Logs of a request, each with its <see cref="LogId"/>; <paramref name="requestIndex"/> is the position of the request among the received ones.</summary>
     public static IEnumerable<TelemetryLog> MapLogs(ExportLogsServiceRequest request, int requestIndex)
     {
         for (var ri = 0; ri < request.ResourceLogs.Count; ri++)

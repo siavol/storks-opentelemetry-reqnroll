@@ -1,20 +1,17 @@
 namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>
-/// Notices Window Overlap: the Observation Window of a scenario opening while the window of another scenario is still
-/// open (scenarios run in parallel). Attribution goes by time only and checks each window on its own, so telemetry in the
-/// overlap shows up in each of the overlapping scenarios; this only warns and never changes Attribution. Thread-safe: parallel scenarios open and close their
-/// windows on their own threads.
+/// Warns about Window Overlap, since telemetry in the overlap shows up in each overlapping scenario. Thread-safe:
+/// parallel scenarios open and close their windows on their own threads.
 /// </summary>
 internal interface IWindowOverlap
 {
-    /// <summary>Marks the window of <paramref name="run"/> open; returns the warning if other windows are open, else null.</summary>
+    /// <summary>The warning to show, or null.</summary>
     string? Opened(ScenarioRun run);
 
-    /// <summary>Marks the window of <paramref name="run"/> closed.</summary>
     void Closed(ScenarioRun run);
 
-    /// <summary>The one end-of-run line about the overlaps noticed, or null when there were none.</summary>
+    /// <summary>One end-of-run line instead of a warning per scenario, or null.</summary>
     string? Summary();
 }
 
