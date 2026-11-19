@@ -8,6 +8,8 @@ using OpenTelemetry.Proto.Common.V1;
 using OpenTelemetry.Proto.Logs.V1;
 using OpenTelemetry.Proto.Resource.V1;
 using OpenTelemetry.Proto.Trace.V1;
+using Storks.OpenTelemetry.Reqnroll.Core;
+using Storks.OpenTelemetry.Reqnroll.Receiver;
 
 namespace Storks.OpenTelemetry.Reqnroll.Tests;
 

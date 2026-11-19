@@ -1,4 +1,5 @@
 using Reqnroll;
+using Storks.OpenTelemetry.Reqnroll.Core;
 
 namespace Storks.OpenTelemetry.Reqnroll;
 

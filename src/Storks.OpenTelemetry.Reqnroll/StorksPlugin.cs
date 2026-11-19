@@ -2,6 +2,8 @@ using Reqnroll.Events;
 using Reqnroll.Plugins;
 using Reqnroll.UnitTestProvider;
 using Storks.OpenTelemetry.Reqnroll;
+using Storks.OpenTelemetry.Reqnroll.Core;
+using Storks.OpenTelemetry.Reqnroll.Receiver;
 
 [assembly: RuntimePlugin(typeof(StorksPlugin))]
 

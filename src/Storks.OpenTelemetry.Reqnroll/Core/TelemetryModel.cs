@@ -1,4 +1,4 @@
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 internal enum LogSeverity { Trace, Debug, Information, Warning, Error, Critical }
 

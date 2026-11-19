@@ -1,4 +1,4 @@
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>
 /// Notices Window Overlap: the Observation Window of a scenario opening while the window of another scenario is still

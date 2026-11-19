@@ -1,4 +1,4 @@
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>The folder the plugin writes its end-of-run files to (telemetry.html, traces.jsonl, logs.jsonl).</summary>
 internal static class ReportDirectory

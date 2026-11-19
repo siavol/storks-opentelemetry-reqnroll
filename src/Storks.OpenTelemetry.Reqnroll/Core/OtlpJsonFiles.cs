@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>Writes everything received over OTLP as OTLP/JSON Lines: one line per accepted request, no filtering.</summary>
 internal static class OtlpJsonFiles

@@ -1,8 +1,7 @@
-using System.Reflection;
 using OpenTelemetry.Proto.Collector.Logs.V1;
 using OpenTelemetry.Proto.Collector.Trace.V1;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>
 /// Renders and writes the self-contained Telemetry Viewer page (<c>telemetry.html</c>). Data goes into

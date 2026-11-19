@@ -1,6 +1,7 @@
 using Reqnroll;
 using Reqnroll.Bindings;
 using Reqnroll.Events;
+using Storks.OpenTelemetry.Reqnroll.Core;
 
 namespace Storks.OpenTelemetry.Reqnroll;
 

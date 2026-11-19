@@ -2,8 +2,9 @@ using OpenTelemetry.Proto.Collector.Logs.V1;
 using OpenTelemetry.Proto.Collector.Trace.V1;
 using OpenTelemetry.Proto.Common.V1;
 using OpenTelemetry.Proto.Logs.V1;
+using Storks.OpenTelemetry.Reqnroll.Core;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Receiver;
 
 /// <summary>OTLP protobuf -> neutral model. The only place that knows OTLP types.</summary>
 internal static class OtlpMapper

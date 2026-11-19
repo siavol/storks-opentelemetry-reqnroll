@@ -1,4 +1,4 @@
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>
 /// The plugin's end-of-run lines (where the files are, its own errors, the Window Overlap summary), each with

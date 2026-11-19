@@ -1,7 +1,7 @@
 using OpenTelemetry.Proto.Collector.Logs.V1;
 using OpenTelemetry.Proto.Collector.Trace.V1;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>Everything received up to one moment: the neutral model and the accepted OTLP requests, consistent with each other.</summary>
 internal sealed record TelemetrySnapshot(

@@ -1,4 +1,4 @@
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>Writes a link into the test report as a log message of the step or hook currently running.</summary>
 internal interface ILinkWriter

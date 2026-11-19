@@ -1,4 +1,4 @@
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>One Gherkin step of one scenario run, as it actually ran.</summary>
 internal sealed record StepRun(int Number, string Keyword, string Text, DateTimeOffset Start, DateTimeOffset End, string Status, string? Error);

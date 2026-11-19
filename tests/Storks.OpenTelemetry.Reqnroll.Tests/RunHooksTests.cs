@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using Storks.OpenTelemetry.Reqnroll.Core;
+using Storks.OpenTelemetry.Reqnroll.Receiver;
 
 namespace Storks.OpenTelemetry.Reqnroll.Tests;
 

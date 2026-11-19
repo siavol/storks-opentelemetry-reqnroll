@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>
 /// An Observation Window in the OTLP/JSON time format (<see cref="StartUnixNano"/>, <see cref="EndUnixNano"/>) and the
