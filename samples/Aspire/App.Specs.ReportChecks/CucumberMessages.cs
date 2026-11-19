@@ -6,8 +6,11 @@ using System.Text.RegularExpressions;
 namespace App.Specs.ReportChecks;
 
 /// <summary>Minimal reader over the Cucumber Messages NDJSON written by Reqnroll.</summary>
-public sealed class CucumberMessages
+public sealed partial class CucumberMessages
 {
+    [GeneratedRegex("<a\\s+href=\"(telemetry\\.html#[^\"]*)\"")]
+    private static partial Regex TelemetryHref();
+
     private readonly List<JsonObject> _messages;
 
     private CucumberMessages(List<JsonObject> messages) => _messages = messages;
@@ -52,7 +55,7 @@ public sealed class CucumberMessages
 
         return Of("attachment")
             .Where(a => (string?)a["mediaType"] == "text/x.cucumber.log+plain" && a["testCaseStartedId"]?.GetValue<string>() is { } id && startedIds.Contains(id))
-            .Select(a => (Message: a, Href: Regex.Match((string)a["body"]!, "<a\\s+href=\"(telemetry\\.html#[^\"]*)\"")))
+            .Select(a => (Message: a, Href: TelemetryHref().Match((string)a["body"]!)))
             .Where(x => x.Href.Success)
             .Select(x =>
             {

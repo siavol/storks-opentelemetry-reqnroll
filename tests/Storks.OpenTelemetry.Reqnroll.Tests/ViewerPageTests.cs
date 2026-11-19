@@ -13,8 +13,11 @@ using Storks.OpenTelemetry.Reqnroll.Receiver;
 
 namespace Storks.OpenTelemetry.Reqnroll.Tests;
 
-public class ViewerPageTests
+public partial class ViewerPageTests
 {
+    [GeneratedRegex("<script>")]
+    private static partial Regex ExecutableScript();
+
     private static readonly DateTimeOffset T0 = new(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);
 
     private static (RunRecord Record, ScenarioRun Run) RunWithError(string error)
@@ -127,7 +130,7 @@ public class ViewerPageTests
             Is.EqualTo("</script><script>alert(2)</script>"), "escaped, but the value survives");
         Assert.That(html, Does.Not.Contain("fetch(").And.Not.Contain("XMLHttpRequest"));
         Assert.That(html, Does.Not.Match(@"(src|href)\s*=\s*""https?:"), "must work offline");
-        Assert.That(Regex.Count(html, "<script>"), Is.EqualTo(1), "exactly one executable script element");
+        Assert.That(ExecutableScript().Count(html), Is.EqualTo(1), "exactly one executable script element");
     }
 
     [Test]
