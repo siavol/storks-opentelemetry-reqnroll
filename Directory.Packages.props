@@ -12,7 +12,7 @@
   -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ReqnrollMinVersion>3.0.0</ReqnrollMinVersion>
+    <ReqnrollMinVersion>3.3.4</ReqnrollMinVersion>
     <ReqnrollVersion Condition="'$(ReqnrollVersion)' == ''">3.3.4</ReqnrollVersion>
     <AspireVersion>13.6.5</AspireVersion>
     <OpenTelemetryVersion>1.21.0</OpenTelemetryVersion>
