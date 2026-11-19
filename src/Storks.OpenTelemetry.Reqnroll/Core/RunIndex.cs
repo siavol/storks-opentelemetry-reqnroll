@@ -52,8 +52,8 @@ internal sealed record UnattributedIndexEntry(
     IReadOnlyList<HookIndexEntry> Hooks, string StartUnixNano, string EndUnixNano, IReadOnlyList<string> SpanIds, IReadOnlyList<string> LogIds)
     : AttributedWindow(StartUnixNano, EndUnixNano, SpanIds, LogIds);
 
-/// <summary>A feature; <see cref="Uri"/> is the path of its feature file, if known.</summary>
-internal sealed record FeatureIndexEntry(string Name, IReadOnlyList<ScenarioIndexEntry> Scenarios, string? Uri);
+/// <summary>A feature and its scenario runs.</summary>
+internal sealed record FeatureIndexEntry(string Name, IReadOnlyList<ScenarioIndexEntry> Scenarios);
 
 /// <summary>
 /// The attribution index embedded into the Telemetry Viewer page: features, scenario runs, steps, and which spans are
@@ -81,8 +81,7 @@ internal sealed record RunIndex(IReadOnlyList<FeatureIndexEntry> Features, Unatt
         var spanItems = (spans ?? []).Select(s => new Timed(s.SpanId, s.Start, s.ParentSpanId)).OrderBy(t => t.Time).ToList();
         var logItems = (logs ?? []).Where(l => l.Id is not null).Select(l => new Timed(l.Id!, l.Timestamp, l.SpanId)).OrderBy(t => t.Time).ToList();
         var features = runs.GroupBy(r => r.Feature) // GroupBy keeps first-appearance order
-            .Select(g => new FeatureIndexEntry(g.Key, g.Select(r => ScenarioEntry(r, spanItems, logItems)).ToList(),
-                g.Select(r => r.FeatureUri).FirstOrDefault(u => u is not null)))
+            .Select(g => new FeatureIndexEntry(g.Key, g.Select(r => ScenarioEntry(r, spanItems, logItems)).ToList()))
             .ToList();
         return new(features, UnattributedEntry(features, runs, runHooks, start, spanItems, logItems));
     }

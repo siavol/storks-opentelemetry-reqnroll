@@ -38,7 +38,6 @@ button { font: inherit; color: inherit; }
 #side { background: var(--bg2); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: auto; }
 #side h1 { font-size: 13px; margin: 0; padding: 14px 14px 10px; color: var(--fg2); font-weight: 600; }
 .feat { padding: 8px 14px 4px; font-weight: 600; }
-.feat small { color: var(--fg3); font-weight: 400; display: block; }
 .sc { display: flex; gap: 8px; padding: 6px 14px 6px 22px; cursor: pointer; align-items: flex-start; }
 .sc:hover { background: var(--bg3); }
 .sc.sel { background: var(--accent-bg); }
@@ -397,7 +396,6 @@ function renderSide() {
   side.replaceChildren(el("h1", "", "Telemetry Viewer"));
   for (const f of INDEX.features) {
     const feat = el("div", "feat", f.name);
-    if (f.uri) feat.append(el("small", "", f.uri));
     side.append(feat);
     for (const s of f.scenarios) {
       const item = el("div", "sc" + (state.view === s.id ? " sel" : ""));

@@ -15,10 +15,9 @@ internal sealed class ScenarioRun
     private readonly List<StepRun> _steps = [];
     private readonly List<HookRun> _hooks = [];
 
-    internal ScenarioRun(string feature, string name, IReadOnlyList<string> tags, DateTimeOffset start, string? featureUri = null)
+    internal ScenarioRun(string feature, string name, IReadOnlyList<string> tags, DateTimeOffset start)
     {
         Feature = feature;
-        FeatureUri = featureUri;
         Name = name;
         Tags = tags;
         Start = start;
@@ -28,8 +27,6 @@ internal sealed class ScenarioRun
     public string Id { get; } = Guid.NewGuid().ToString("N");
     public string Feature { get; }
 
-    /// <summary>Path of the feature file as in Cucumber messages (e.g. <c>Features/Checkout.feature</c>), if known.</summary>
-    public string? FeatureUri { get; }
     public string Name { get; }
     public IReadOnlyList<string> Tags { get; }
     /// <summary>Start of the Observation Window: when the plugin's BeforeScenario hook opened it (<see cref="OpenWindow"/>).</summary>
@@ -105,9 +102,9 @@ internal sealed class RunRecord(DateTimeOffset start)
         lock (_gate) return _runHooks.OrderBy(h => h.Start).ToArray();
     }
 
-    public ScenarioRun Begin(string feature, string name, IReadOnlyList<string> tags, DateTimeOffset start, string? featureUri = null)
+    public ScenarioRun Begin(string feature, string name, IReadOnlyList<string> tags, DateTimeOffset start)
     {
-        var run = new ScenarioRun(feature, name, tags, start, featureUri);
+        var run = new ScenarioRun(feature, name, tags, start);
         lock (_gate) _runs.Add(run);
         return run;
     }

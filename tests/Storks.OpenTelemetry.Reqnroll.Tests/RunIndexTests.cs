@@ -52,17 +52,6 @@ public class RunIndexTests
     }
 
     [Test]
-    public void Feature_carries_the_path_of_its_feature_file()
-    {
-        var record = new RunRecord();
-        record.Begin("Checkout", "S", [], T0, "Features/Checkout.feature").Finish(T0, "passed", null);
-
-        var json = JsonNode.Parse(RunIndex.Build(record.Snapshot()).ToJson())!;
-
-        Assert.That((string?)json["features"]![0]!["uri"], Is.EqualTo("Features/Checkout.feature"));
-    }
-
-    [Test]
     public void Steps_are_numbered_from_one_and_have_window_relative_to_scenario_start()
     {
         var record = new RunRecord();
