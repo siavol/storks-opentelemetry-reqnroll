@@ -1,4 +1,4 @@
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 internal enum SpanKind { Unspecified, Internal, Server, Client, Producer, Consumer }
 

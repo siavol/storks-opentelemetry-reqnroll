@@ -8,6 +8,8 @@ using OpenTelemetry.Proto.Logs.V1;
 using OpenTelemetry.Proto.Resource.V1;
 using OpenTelemetry.Proto.Trace.V1;
 using Storks.OpenTelemetry.Reqnroll;
+using Storks.OpenTelemetry.Reqnroll.Core;
+using Storks.OpenTelemetry.Reqnroll.Receiver;
 
 namespace Storks.OpenTelemetry.Reqnroll.Tests;
 
@@ -175,7 +177,7 @@ public class OtlpJsonTests
         // A regular file where the report directory should be makes every write fail.
         var blocker = TempDir();
         Directory.CreateDirectory(Path.GetDirectoryName(blocker)!);
-        File.WriteAllText(blocker, "x");
+        await File.WriteAllTextAsync(blocker, "x");
         var old = Environment.GetEnvironmentVariable(ReportDirectory.Variable);
         Environment.SetEnvironmentVariable(ReportDirectory.Variable, blocker);
         try

@@ -1,15 +1,11 @@
-using System.Reflection;
 using OpenTelemetry.Proto.Collector.Logs.V1;
 using OpenTelemetry.Proto.Collector.Trace.V1;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>
-/// Renders and writes the self-contained Telemetry Viewer page (<c>telemetry.html</c>). Data goes into
-/// <c>&lt;script type="application/json"&gt;</c> blocks: the attribution index (<c>run-index</c>) and the received
-/// trace and log requests as arrays of OTLP/JSON (<c>otlp-traces</c>, <c>otlp-logs</c>), the same objects as the lines of
-/// <c>traces.jsonl</c> and <c>logs.jsonl</c>. Logs in the index are referred to by <see cref="TelemetryLog.Id"/>, which the
-/// OTLP receiver sets to the position of the record in <c>otlp-logs</c>.
+/// The self-contained Telemetry Viewer page: it embeds the received requests as the same OTLP/JSON as the .jsonl files,
+/// so the viewer shows them without loss.
 /// </summary>
 internal static class ViewerPage
 {

@@ -1,0 +1,86 @@
+# Reusable E2E: called by ci.yml and release.yml after build.yml.
+# Runs the Aspire sample on the packed nupkg (UseLocalPackage=true), exactly as a user's project consumes it,
+# then the report checks. Ubuntu only: the sample needs Docker (Postgres container).
+name: E2E
+
+on:
+  workflow_call:
+    inputs:
+      package-artifact:
+        description: Name of the artifact with the nupkg from build.yml.
+        type: string
+        required: true
+
+permissions: {}
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+jobs:
+  e2e:
+    name: E2E (Aspire sample on the nupkg)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+        with:
+          # Local package mode restores into artifacts/samples-packages, not the global packages folder.
+          cache: "false"
+
+      - name: Download packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.package-artifact }}
+          path: artifacts/packages
+
+      # Restore is not locked in local package mode (the package version changes with every commit);
+      # build.yml has already checked the committed lock files with a locked restore.
+      - name: Run App.Specs on the nupkg
+        run: |
+          set +e
+          dotnet test samples/Aspire/App.Specs -p:UseLocalPackage=true \
+            --logger "trx;LogFileName=app-specs.trx" --results-directory artifacts/test-results
+          echo "dotnet test exited with $? (non-zero is expected: @demo-failure fails by design; checked next)"
+
+      # The @demo-failure scenario in samples/Aspire/App.Specs/Features/Checkout.feature fails on purpose, so the
+      # report shows a red scenario. It is kept in the run because the report checks assert that red scenario.
+      # Here: that exact scenario failed and every other test passed. Update EXPECTED_RED if that scenario is renamed.
+      - name: Check that only @demo-failure is red
+        env:
+          TRX: artifacts/test-results/app-specs.trx
+          EXPECTED_RED: CustomerPlacesAnOrderForASKUWhosePriceCannotBeFetched
+        shell: python
+        run: |
+          import os, sys, xml.etree.ElementTree as ET
+          # "{*}" matches the trx XML namespace without spelling out its URI.
+          results = ET.parse(os.environ["TRX"]).getroot().findall(".//{*}UnitTestResult")
+          outcomes = {r.get("testName"): r.get("outcome") for r in results}
+          print("\n".join(f"{o:>8}  {n}" for n, o in sorted(outcomes.items())))
+          red = sorted(n for n, o in outcomes.items() if o != "Passed")
+          expected = [os.environ["EXPECTED_RED"]]
+          # The red scenario plus at least one passing test: a run that lost its other tests must not pass.
+          min_tests = 2
+          if red != expected or len(outcomes) < min_tests:
+              sys.exit(f"::error::Expected exactly {expected} to fail and all other tests to pass; not passed: {red}")
+
+      - name: Report checks
+        run: dotnet test samples/Aspire/App.Specs.ReportChecks
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-reports
+          path: |
+            samples/Aspire/App.Specs/bin/Debug/net11.0/reports/
+            artifacts/test-results/
+          if-no-files-found: ignore

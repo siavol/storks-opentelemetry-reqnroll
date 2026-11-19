@@ -1,8 +1,10 @@
 using Reqnroll;
+using Storks.OpenTelemetry.Reqnroll.Core;
+using Storks.OpenTelemetry.Reqnroll.Receiver;
 
 namespace Storks.OpenTelemetry.Reqnroll;
 
-/// <summary>End-of-run work: writes the Telemetry Viewer page and the OTLP/JSON files, and stops the receiver. Never fails the run.</summary>
+/// <summary>End-of-run work. Never fails the run: the tests have passed or failed on their own by then.</summary>
 [Binding]
 internal static class RunHooks
 {

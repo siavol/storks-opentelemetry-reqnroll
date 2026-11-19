@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>
 /// Plugin-internal errors raised outside a test context (e.g. by the receiver thread). They are

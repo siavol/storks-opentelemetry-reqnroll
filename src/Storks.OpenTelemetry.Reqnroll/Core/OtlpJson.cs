@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Google.Protobuf;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>
 /// Serializes an OTLP export request as a single line of OTLP/JSON (as the OTLP File Exporter writes it):

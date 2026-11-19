@@ -1,7 +1,7 @@
 using OpenTelemetry.Proto.Collector.Logs.V1;
 using OpenTelemetry.Proto.Collector.Trace.V1;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>Everything received up to one moment: the neutral model and the accepted OTLP requests, consistent with each other.</summary>
 internal sealed record TelemetrySnapshot(
@@ -14,13 +14,12 @@ internal sealed record TelemetrySnapshot(
 /// </summary>
 internal sealed class TelemetryStore
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly List<TelemetryLog> _logs = [];
     private readonly List<TelemetrySpan> _spans = [];
     private readonly List<ExportLogsServiceRequest> _logRequests = [];
     private readonly List<ExportTraceServiceRequest> _traceRequests = [];
 
-    /// <summary>Keeps an accepted trace request and its spans in the neutral model.</summary>
     public void AddTraces(ExportTraceServiceRequest request, IEnumerable<TelemetrySpan> spans)
     {
         var list = spans.ToList();
@@ -31,11 +30,7 @@ internal sealed class TelemetryStore
         }
     }
 
-    /// <summary>
-    /// Keeps an accepted log request and its logs in the neutral model. <paramref name="logs"/> gets the position of the
-    /// request among the received log requests: <see cref="TelemetryLog.Id"/> may refer to it, and it stays valid in
-    /// every later <see cref="Snapshot"/>.
-    /// </summary>
+    /// <summary>Maps the logs under the lock, so that the request position their ids may hold is the one it gets.</summary>
     public void AddLogs(ExportLogsServiceRequest request, Func<int, IEnumerable<TelemetryLog>> logs)
     {
         lock (_gate)

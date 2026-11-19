@@ -8,11 +8,16 @@ using OpenTelemetry.Proto.Common.V1;
 using OpenTelemetry.Proto.Logs.V1;
 using OpenTelemetry.Proto.Resource.V1;
 using OpenTelemetry.Proto.Trace.V1;
+using Storks.OpenTelemetry.Reqnroll.Core;
+using Storks.OpenTelemetry.Reqnroll.Receiver;
 
 namespace Storks.OpenTelemetry.Reqnroll.Tests;
 
-public class ViewerPageTests
+public partial class ViewerPageTests
 {
+    [GeneratedRegex("<script>")]
+    private static partial Regex ExecutableScript();
+
     private static readonly DateTimeOffset T0 = new(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);
 
     private static (RunRecord Record, ScenarioRun Run) RunWithError(string error)
@@ -31,8 +36,8 @@ public class ViewerPageTests
         var scope = new ScopeSpans { Scope = new InstrumentationScope { Name = "Pricing.Scope" } };
         scope.Spans.Add(new Span
         {
-            TraceId = ByteString.CopyFrom(new byte[16] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }),
-            SpanId = ByteString.CopyFrom(new byte[8] { 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8 }),
+            TraceId = ByteString.CopyFrom(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
+            SpanId = ByteString.CopyFrom(0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8),
             Name = spanName,
             StartTimeUnixNano = 1_794_650_400_001_000_000UL,
             EndTimeUnixNano = 1_794_650_400_002_000_000UL,
@@ -56,7 +61,7 @@ public class ViewerPageTests
                 SeverityNumber = SeverityNumber.Warn,
                 SeverityText = "Warning",
                 Body = new AnyValue { StringValue = body },
-                SpanId = ByteString.CopyFrom(new byte[8] { 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8 }),
+                SpanId = ByteString.CopyFrom(0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8),
             });
         }
         resource.ScopeLogs.Add(scope);
@@ -125,7 +130,7 @@ public class ViewerPageTests
             Is.EqualTo("</script><script>alert(2)</script>"), "escaped, but the value survives");
         Assert.That(html, Does.Not.Contain("fetch(").And.Not.Contain("XMLHttpRequest"));
         Assert.That(html, Does.Not.Match(@"(src|href)\s*=\s*""https?:"), "must work offline");
-        Assert.That(Regex.Count(html, "<script>"), Is.EqualTo(1), "exactly one executable script element");
+        Assert.That(ExecutableScript().Count(html), Is.EqualTo(1), "exactly one executable script element");
     }
 
     [Test]

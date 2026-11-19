@@ -1,4 +1,4 @@
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>One Gherkin step of one scenario run, as it actually ran.</summary>
 internal sealed record StepRun(int Number, string Keyword, string Text, DateTimeOffset Start, DateTimeOffset End, string Status, string? Error);
@@ -15,10 +15,9 @@ internal sealed class ScenarioRun
     private readonly List<StepRun> _steps = [];
     private readonly List<HookRun> _hooks = [];
 
-    internal ScenarioRun(string feature, string name, IReadOnlyList<string> tags, DateTimeOffset start, string? featureUri = null)
+    internal ScenarioRun(string feature, string name, IReadOnlyList<string> tags, DateTimeOffset start)
     {
         Feature = feature;
-        FeatureUri = featureUri;
         Name = name;
         Tags = tags;
         Start = start;
@@ -28,8 +27,6 @@ internal sealed class ScenarioRun
     public string Id { get; } = Guid.NewGuid().ToString("N");
     public string Feature { get; }
 
-    /// <summary>Path of the feature file as in Cucumber messages (e.g. <c>Features/Checkout.feature</c>), if known.</summary>
-    public string? FeatureUri { get; }
     public string Name { get; }
     public IReadOnlyList<string> Tags { get; }
     /// <summary>Start of the Observation Window: when the plugin's BeforeScenario hook opened it (<see cref="OpenWindow"/>).</summary>
@@ -68,9 +65,7 @@ internal sealed class ScenarioRun
         _closed = true;
     }
 
-    /// <param name="end">End of the window unless <see cref="CloseWindow"/> has closed it already.</param>
-    /// <param name="status">Final status of the scenario.</param>
-    /// <param name="error">Error message of a failed scenario.</param>
+    /// <summary>Ends the window here only if the plugin's AfterScenario hook did not run.</summary>
     public void Finish(DateTimeOffset end, string status, string? error)
     {
         if (!_closed) End = end;
@@ -86,7 +81,7 @@ internal sealed class ScenarioRun
 /// </summary>
 internal sealed class RunRecord(DateTimeOffset start)
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly List<ScenarioRun> _runs = [];
     private readonly List<HookRun> _runHooks = [];
 
@@ -105,9 +100,9 @@ internal sealed class RunRecord(DateTimeOffset start)
         lock (_gate) return _runHooks.OrderBy(h => h.Start).ToArray();
     }
 
-    public ScenarioRun Begin(string feature, string name, IReadOnlyList<string> tags, DateTimeOffset start, string? featureUri = null)
+    public ScenarioRun Begin(string feature, string name, IReadOnlyList<string> tags, DateTimeOffset start)
     {
-        var run = new ScenarioRun(feature, name, tags, start, featureUri);
+        var run = new ScenarioRun(feature, name, tags, start);
         lock (_gate) _runs.Add(run);
         return run;
     }

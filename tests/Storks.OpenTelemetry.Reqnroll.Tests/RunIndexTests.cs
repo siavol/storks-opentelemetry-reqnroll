@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using NUnit.Framework;
+using Storks.OpenTelemetry.Reqnroll.Core;
 
 namespace Storks.OpenTelemetry.Reqnroll.Tests;
 
@@ -49,17 +50,6 @@ public class RunIndexTests
         Assert.That(redScenario.Steps[1].Status, Is.EqualTo("failed"));
         Assert.That(redScenario.Steps[1].Error, Is.EqualTo("Expected 50 but was 0"));
         Assert.That(redScenario.Error, Is.EqualTo("Expected 50 but was 0"));
-    }
-
-    [Test]
-    public void Feature_carries_the_path_of_its_feature_file()
-    {
-        var record = new RunRecord();
-        record.Begin("Checkout", "S", [], T0, "Features/Checkout.feature").Finish(T0, "passed", null);
-
-        var json = JsonNode.Parse(RunIndex.Build(record.Snapshot()).ToJson())!;
-
-        Assert.That((string?)json["features"]![0]!["uri"], Is.EqualTo("Features/Checkout.feature"));
     }
 
     [Test]

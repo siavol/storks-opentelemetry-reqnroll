@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>Writes everything received over OTLP as OTLP/JSON Lines: one line per accepted request, no filtering.</summary>
 internal static class OtlpJsonFiles
@@ -8,7 +8,6 @@ internal static class OtlpJsonFiles
     public const string TracesFileName = "traces.jsonl";
     public const string LogsFileName = "logs.jsonl";
 
-    /// <summary>Writes both files (empty if nothing was received) and returns the directory.</summary>
     public static string Write(string directory, TelemetryStore store)
     {
         Directory.CreateDirectory(directory);

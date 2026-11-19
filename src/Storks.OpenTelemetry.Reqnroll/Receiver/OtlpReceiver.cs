@@ -1,3 +1,4 @@
+using System.Net;
 using Google.Protobuf;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -5,16 +6,15 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using OpenTelemetry.Proto.Collector.Logs.V1;
 using OpenTelemetry.Proto.Collector.Trace.V1;
+using Storks.OpenTelemetry.Reqnroll.Core;
 
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Receiver;
 
 /// <summary>
-/// In-process OTLP/HTTP protobuf receiver (Telemetry Source). Listens on a dynamic loopback port.
-/// Accepts logs at POST /v1/logs and traces at POST /v1/traces; other signals are acknowledged and dropped.
+/// In-process OTLP/HTTP receiver (Telemetry Source) on a dynamic loopback port, so that parallel test runs never clash
+/// and nothing outside the machine can send to it.
 /// </summary>
 internal sealed class OtlpReceiver : IAsyncDisposable
 {
@@ -22,8 +22,6 @@ internal sealed class OtlpReceiver : IAsyncDisposable
     private readonly Action<string>? _onError;
     private WebApplication? _app;
 
-    /// <param name="store">Receives every accepted span and log.</param>
-    /// <param name="onError">Receives a description of every rejected or failed request (e.g. to write it to test output).</param>
     public OtlpReceiver(TelemetryStore store, Action<string>? onError = null)
     {
         _store = store;
@@ -36,7 +34,7 @@ internal sealed class OtlpReceiver : IAsyncDisposable
         catch { /* the error sink must never break the receiver */ }
     }
 
-    /// <summary>Shared path of every signal: read body, parse, store, respond. Errors are reported and never stop the receiver.</summary>
+    /// <summary>Errors are reported and never stop the receiver: one bad request must not lose the rest of the run.</summary>
     private async Task Handle<TRequest, TResponse>(HttpRequest request, string path, MessageParser<TRequest> parser,
         Action<TRequest> store, TResponse response)
         where TRequest : IMessage<TRequest>
@@ -63,11 +61,9 @@ internal sealed class OtlpReceiver : IAsyncDisposable
         }
     }
 
-    /// <summary>Keeps the accepted request as received and its neutral mapping; a log's id is its position among the received requests.</summary>
     public static void StoreLogs(TelemetryStore store, ExportLogsServiceRequest export) =>
         store.AddLogs(export, requestIndex => OtlpMapper.MapLogs(export, requestIndex));
 
-    /// <summary>Keeps the accepted request as received and its neutral mapping.</summary>
     public static void StoreTraces(TelemetryStore store, ExportTraceServiceRequest export) =>
         store.AddTraces(export, OtlpMapper.MapSpans(export));
 
@@ -75,9 +71,13 @@ internal sealed class OtlpReceiver : IAsyncDisposable
 
     public async Task StartAsync()
     {
-        var builder = WebApplication.CreateSlimBuilder();
-        builder.Logging.ClearProviders();
-        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        // The empty builder reads no configuration (environment variables, appsettings.json, command line), so ambient
+        // Kestrel endpoints, ASPNETCORE_URLS or ASPNETCORE_HTTP_PORTS of the test process cannot add listeners:
+        // the receiver only ever listens on its own loopback port.
+        var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
+        builder.WebHost.UseKestrelCore();
+        builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Loopback, 0));
+        builder.Services.AddRoutingCore();
         var app = builder.Build();
 
         app.MapPost("/v1/logs", ctx => Handle(ctx.Request, "/v1/logs", ExportLogsServiceRequest.Parser,
@@ -88,7 +88,7 @@ internal sealed class OtlpReceiver : IAsyncDisposable
 
         await app.StartAsync();
         var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
-        Endpoint = new Uri(address.EndsWith('/') ? address : address + "/");
+        Endpoint = new Uri(address); // the root path: "http://127.0.0.1:<port>/"
         _app = app;
     }
 

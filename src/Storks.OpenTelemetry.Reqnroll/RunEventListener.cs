@@ -1,6 +1,7 @@
 using Reqnroll;
 using Reqnroll.Bindings;
 using Reqnroll.Events;
+using Storks.OpenTelemetry.Reqnroll.Core;
 
 namespace Storks.OpenTelemetry.Reqnroll;
 
@@ -15,11 +16,7 @@ internal sealed class ReqnrollLinkWriter(IReqnrollOutputHelper output) : ILinkWr
         output.WriteLine($"<a href=\"{System.Net.WebUtility.HtmlEncode(link)}\">Open telemetry</a>");
 }
 
-/// <summary>
-/// Async listener: output added on <see cref="StepFinishedEvent"/> lands on the Gherkin step itself, not on a hook (output
-/// written from an AfterStep hook would land on the hook's test step). Records the run (steps, hooks, statuses, windows)
-/// and writes the step link. Never throws: errors go to <see cref="PluginDiagnostics"/>.
-/// </summary>
+/// <summary>Records the run from Reqnroll's events. Never throws: a plugin error must not change a test result.</summary>
 internal sealed class RunEventListener(RunTracker tracker, RunRecord record, PluginDiagnostics diagnostics) : IAsyncExecutionEventListener
 {
     /// <summary>
@@ -91,7 +88,6 @@ internal sealed class RunEventListener(RunTracker tracker, RunRecord record, Plu
         tracker.HookFinished(run, hook, AssemblyName(binding.Method.Type.AssemblyName));
     }
 
-    /// <summary>Simple name of an assembly given by its full or simple name.</summary>
     private static string AssemblyName(string? name) => (name ?? "").Split(',')[0].Trim();
 
     private void OnScenarioFinished(ScenarioFinishedEvent finished)

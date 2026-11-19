@@ -1,0 +1,6 @@
+rules:
+  # self-repository asks for `uses: $/...` instead of `uses: ./...` for in-repo actions and reusable workflows.
+  # actionlint (1.7.12, the latest release) rejects the `$/` syntax, and CI runs both linters, so the in-repo
+  # references stay `./...`. Re-enable this audit once actionlint supports `$/`.
+  self-repository:
+    disable: true

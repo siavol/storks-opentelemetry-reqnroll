@@ -1,0 +1,151 @@
+# Release on a pushed tag vX.Y.Z (or a prerelease tag such as v0.1.0-rc.1). Jobs:
+#   build           build.yml without the NuGet cache; MinVer takes the version from the tag
+#   version         the tagged commit is on main and the packed version equals the tag, otherwise nothing is published
+#   e2e             e2e.yml on the packed nupkg
+#   publish         environment `nuget` (tags v* only, waits for a maintainer's approval): Trusted Publishing login,
+#                   then push of exactly the nupkg and snupkg that passed E2E; nothing is rebuilt
+#   github-release  GitHub Release with generated release notes and the nupkg attached
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+# Runs for the same tag never overlap and are never cancelled half-way through a publish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+jobs:
+  build:
+    name: Build
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build.yml
+    with:
+      # What gets published is restored from nuget.org, not from a cache other runs could have written.
+      nuget-cache: false
+
+  version:
+    name: Version matches the tag
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # checkout of main for the ancestry check
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      # Releases come from main only: a v* tag on a branch or a fork-merged commit is not published.
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the tag is on main
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" HEAD; then
+            echo "::error::The tag $TAG ($GITHUB_SHA) is not on main; tag a commit of origin/main"
+            exit 1
+          fi
+
+      - name: Download packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.build.outputs.package-artifact }}
+          path: packages
+
+      # MinVer falls back to a height-based prerelease when it does not see the tag (e.g. a shallow checkout,
+      # a tag that is not a SemVer version): such a package must not reach nuget.org under this tag's release.
+      - name: Check the package version
+        id: check
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          expected="packages/Storks.OpenTelemetry.Reqnroll.$version.nupkg packages/Storks.OpenTelemetry.Reqnroll.$version.snupkg"
+          actual="$(echo packages/*.nupkg packages/*.snupkg)"
+          echo "Expected: $expected"
+          echo "Packed:   $actual"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::The packed version does not match the tag $TAG"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  e2e:
+    name: E2E
+    needs: build
+    permissions:
+      contents: read
+    uses: ./.github/workflows/e2e.yml
+    with:
+      package-artifact: ${{ needs.build.outputs.package-artifact }}
+
+  publish:
+    name: Publish to nuget.org
+    needs: [build, version, e2e]
+    runs-on: ubuntu-latest
+    # Trusted Publishing on nuget.org trusts this workflow file in this environment only.
+    environment:
+      name: nuget
+      url: https://www.nuget.org/packages/Storks.OpenTelemetry.Reqnroll/${{ needs.version.outputs.version }}
+    permissions:
+      id-token: write # the OIDC token that NuGet/login exchanges for a short-lived API key
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.build.outputs.package-artifact }}
+          path: packages
+
+      - name: NuGet login (Trusted Publishing)
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      # Pushing the nupkg also pushes the snupkg next to it. --skip-duplicate makes a re-run after a partial
+      # failure succeed instead of failing on the version that is already there.
+      - name: Push nupkg and snupkg
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: >
+          dotnet nuget push "packages/*.nupkg"
+          --api-key "$NUGET_API_KEY"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+  github-release:
+    name: GitHub Release
+    needs: [build, version, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # gh release create
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.build.outputs.package-artifact }}
+          path: packages
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          prerelease=()
+          if [[ "$VERSION" == *-* ]]; then prerelease=(--prerelease); fi
+          gh release create "$TAG" "packages/Storks.OpenTelemetry.Reqnroll.$VERSION.nupkg" \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$TAG" "${prerelease[@]}"

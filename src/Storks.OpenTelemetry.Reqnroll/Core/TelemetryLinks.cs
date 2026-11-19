@@ -1,4 +1,4 @@
-namespace Storks.OpenTelemetry.Reqnroll;
+namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>Links to the Telemetry Viewer page; relative, since the page lies next to the report.</summary>
 internal static class TelemetryLinks

@@ -1,0 +1,175 @@
+# CI on every PR (including forks) and every push to main. Jobs:
+#   lint        actionlint, then zizmor, over the workflows, the composite action and dependabot.yml
+#   build       build.yml: ubuntu + windows; locked restore, format, build -warnaserror, unit tests with coverage; pack on ubuntu
+#   e2e         e2e.yml: the Aspire sample on the packed nupkg, then the report checks (ubuntu, Docker)
+#   sonarcloud  SonarCloud analysis with the build job's unit-test coverage; skipped without SONAR_TOKEN (forks, Dependabot)
+#   reqnroll    unit tests on the minimum and on the latest Reqnroll 3.x
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+# A new push to a PR cancels its outdated run; runs on main are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+jobs:
+  lint:
+    name: Lint workflows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The image bundles shellcheck, so run: scripts are checked too.
+      - name: actionlint
+        run: >
+          docker run --rm -v "$PWD:/repo" --workdir /repo
+          rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+          -color
+
+      - name: zizmor
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          version: 1.32.0
+          # Findings fail the job and are printed in the log; no SARIF upload, so no security-events permission.
+          advanced-security: false
+
+  build:
+    name: Build
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build.yml
+
+  e2e:
+    name: E2E
+    needs: build
+    permissions:
+      contents: read
+    uses: ./.github/workflows/e2e.yml
+    with:
+      package-artifact: ${{ needs.build.outputs.package-artifact }}
+
+  # Secrets cannot be read in a job-level `if`, so this job tells whether SONAR_TOKEN is available.
+  # It is not in PRs from forks and in Dependabot PRs; there SonarCloud is skipped instead of failing.
+  sonar-token:
+    name: SonarCloud token
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      available: ${{ steps.check.outputs.available }}
+    steps:
+      - name: Check SONAR_TOKEN
+        id: check
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::SONAR_TOKEN is not available (PR from a fork or Dependabot): SonarCloud is skipped."
+          fi
+
+  # SonarScanner for .NET analyses what is built between `begin` and `end`, so this job builds again;
+  # the coverage is the build job's unit-test run (Visual Studio XML).
+  sonarcloud:
+    name: SonarCloud
+    needs: [build, sonar-token]
+    if: needs.sonar-token.outputs.available == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Blame for new-code detection, and MinVer.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Download coverage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.build.outputs.coverage-artifact }}
+          path: artifacts/coverage
+
+      # The artifact also holds the Cobertura report, which the C# coverage importer cannot read.
+      - name: Keep the Visual Studio coverage only
+        run: find artifacts/coverage -name '*.cobertura.xml' -delete
+
+      - name: Restore
+        run: |
+          dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
+          dotnet tool restore
+
+      # The samples are analysed but have no coverage: the E2E job runs them, the coverage is the package's unit tests.
+      - name: Begin analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          dotnet tool run dotnet-sonarscanner begin
+          /k:siavol_storks-opentelemetry-reqnroll
+          /o:siavol
+          /d:sonar.host.url=https://sonarcloud.io
+          "/d:sonar.token=$SONAR_TOKEN"
+          "/d:sonar.cs.vscoveragexml.reportsPaths=artifacts/coverage/**/*.xml"
+          "/d:sonar.coverage.exclusions=samples/**"
+
+      - name: Build
+        run: dotnet build Storks.OpenTelemetry.Reqnroll.slnx --no-restore
+
+      - name: End analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet tool run dotnet-sonarscanner end "/d:sonar.token=$SONAR_TOKEN"
+
+  reqnroll:
+    name: Reqnroll ${{ matrix.reqnroll }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # The minimum supported Reqnroll (ReqnrollMinVersion in Directory.Packages.props) and the latest 3.x.
+        reqnroll: ["3.0.0", "3.*"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # MinVer: the package project is built here too.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+        with:
+          # Restore here does not match the committed lock files, so it must not seed the shared cache.
+          cache: "false"
+
+      # Another Reqnroll than the lock files record: restore unlocked; the rewritten lock files are discarded with the runner.
+      - name: Unit tests
+        env:
+          REQNROLL_VERSION: ${{ matrix.reqnroll }}
+        run: >
+          dotnet test tests/Storks.OpenTelemetry.Reqnroll.Tests
+          "-p:ReqnrollVersion=$REQNROLL_VERSION"
+          -p:CentralPackageFloatingVersionsEnabled=true
+          -p:RestoreLockedMode=false

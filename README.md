@@ -1,23 +1,24 @@
 # Storks.OpenTelemetry.Reqnroll
 
+[![CI](https://github.com/siavol/storks-opentelemetry-reqnroll/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/siavol/storks-opentelemetry-reqnroll/actions/workflows/ci.yml?query=branch%3Amain)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=siavol_storks-opentelemetry-reqnroll&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=siavol_storks-opentelemetry-reqnroll)
+
 A Reqnroll plugin that receives your application's OpenTelemetry traces and logs during `dotnet test` and shows them by scenario and step in a Telemetry Viewer linked from the Reqnroll report.
 
-![Telemetry Viewer: a failed scenario with the span waterfall of its first step and the step's logs, including the error logged by the pricing service](https://raw.githubusercontent.com/OWNER/storks-opentelemetry-reqnroll/main/docs/images/telemetry-viewer.png)
+![Telemetry Viewer: a failed scenario with the span waterfall of its first step and the step's logs, including the error logged by the pricing service](https://raw.githubusercontent.com/siavol/storks-opentelemetry-reqnroll/main/docs/images/telemetry-viewer.png)
 
 ## Why
 
-A scenario goes red: `Expected: 50m But was: 0m`. The test only sees the answer; the reason is inside the system under test (SUT). Orders called Pricing, Pricing failed and logged an error, Orders fell back to a zero price. To find that, you usually open Jaeger, the Aspire dashboard or log files, guess when the scenario ran, narrow the results down to Orders and Pricing and work out which requests belong to which scenario.
+A scenario goes red: `Expected: 50m But was: 0m`. The test sees only the result; the cause is inside the system under test (SUT).
 
-With the plugin, every step and scenario in the Reqnroll report has an **Open telemetry** link. It opens the spans and logs of exactly that step or scenario: the span waterfall across services, the logs on the same timeline, and the properties of each span and log. In the screenshot above, the failed `GET /prices/{sku}` span and the `Pricing failed for SKU BROKEN-1` log are right next to the red step.
-
-The viewer is one self-contained HTML file next to the report. It needs no running service and works the same from a CI artifact you downloaded. All of the run's telemetry is also saved as standard OTLP/JSON Lines for any other tool.
+The plugin links every scenario and step in the Reqnroll report to the traces and logs it produced. The cause is right next to the red step, with no digging through Jaeger or log files. The viewer is one HTML file next to the report, so it works from a downloaded CI artifact too.
 
 ## Quickstart
 
 You need:
 
 - a test project on `net10.0` or later with Reqnroll 3.x;
-- a SUT that the tests start on the same machine, instrumented with OpenTelemetry and exporting over OTLP with the exporter settings taken from the standard `OTEL_*` environment variables. In .NET, `UseOtlpExporter()` or `AddOtlpExporter()` do that as long as the code does not set the endpoint itself.
+- an application that your tests start locally and that exports OpenTelemetry over OTLP (step 2).
 
 **1. Install the package** into the test project. The plugin activates by being referenced; there is nothing to register in `reqnroll.json`.
 
@@ -25,7 +26,7 @@ You need:
 dotnet add package Storks.OpenTelemetry.Reqnroll
 ```
 
-**2. Point the SUT's exporter at the plugin.** In the `[BeforeTestRun]` hook that starts your SUT, take `ITelemetryEndpoint` as a parameter and copy `GetExporterEnvironment()` into the SUT's environment. That loop is the one line to add:
+**2. Point the application's exporter at the plugin.** In the `[BeforeTestRun]` hook that starts your application, take `ITelemetryEndpoint` as a parameter and copy `GetExporterEnvironment()` into its environment. That loop is the one line to add. The application must take its exporter settings from these `OTEL_*` variables: in .NET, `UseOtlpExporter()` or `AddOtlpExporter()` without an explicit endpoint.
 
 ```csharp
 using System.Diagnostics;
@@ -43,7 +44,7 @@ public static class SutHooks
         var start = new ProcessStartInfo("dotnet", "path/to/MyApi.dll --urls http://127.0.0.1:5080");
         foreach (var (name, value) in telemetry.GetExporterEnvironment()) start.Environment[name] = value;
         _sut = Process.Start(start);
-        // ... wait until the SUT answers
+        // ... wait until the application answers
     }
 
     [AfterTestRun]
@@ -90,8 +91,9 @@ Open `reqnroll_report.html` and follow **Open telemetry** on a step, or open `te
 
 ## How it works
 
-<!-- Generated from docs/images/how-it-works.mmd, see CONTRIBUTING.md. A PNG, because nuget.org renders no Mermaid. -->
-![The SUT sends traces and logs over OTLP/HTTP to the plugin's receiver inside the test process; the plugin takes scenario and step start and end from the Reqnroll scenarios and, at the end of the run, writes telemetry.html, traces.jsonl and logs.jsonl to the reports folder, where the Open telemetry links of reqnroll_report.html lead](https://raw.githubusercontent.com/OWNER/storks-opentelemetry-reqnroll/main/docs/images/how-it-works.png)
+<!-- Generated from docs/images/how-it-works.mmd. A PNG, because nuget.org renders no Mermaid. Regenerate:
+     npx -p @mermaid-js/mermaid-cli@11.4.2 mmdc -i docs/images/how-it-works.mmd -o docs/images/how-it-works.png -s 2 -b white -->
+![The SUT sends traces and logs over OTLP/HTTP to the plugin's receiver inside the test process; the plugin takes scenario and step start and end from the Reqnroll scenarios and, at the end of the run, writes telemetry.html, traces.jsonl and logs.jsonl to the reports folder, where the Open telemetry links of reqnroll_report.html lead](https://raw.githubusercontent.com/siavol/storks-opentelemetry-reqnroll/main/docs/images/how-it-works.png)
 
 1. **Receiver.** When the test run starts, the plugin starts an OTLP/HTTP (protobuf) receiver inside the test process, on a random port of `127.0.0.1`. It accepts traces and logs; metrics are accepted and dropped.
 2. **Exporter settings.** `ITelemetryEndpoint.GetExporterEnvironment()` returns the variables that send the SUT's OTLP exporter there:
@@ -136,7 +138,7 @@ Attribution goes by time only. When scenarios run in parallel, the Observation W
 The plugin warns about it. The test output of a scenario gets a line like:
 
 ```text
-[Storks.OpenTelemetry] Window Overlap: scenario 'Pricing: Apply discount' started while 'Checkout: Pay by card' was still running, so telemetry in the overlap shows up in each of the overlapping scenarios. See https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap
+[Storks.OpenTelemetry] Window Overlap: scenario 'Pricing: Apply discount' started while 'Checkout: Pay by card' was still running, so telemetry in the overlap shows up in each of the overlapping scenarios. See https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap
 ```
 
 and the end of the run writes one summary line with the number of overlaps to the console of the test process (with `dotnet test`, at detailed verbosity, see [How it works](#how-it-works)). In a parallel run the warning can land in the output of a neighbouring scenario; both scenario names are in the text. Sequential runs print nothing.
@@ -150,15 +152,3 @@ Telemetry is attributed by its own timestamps at the end of the run, so a span t
 - The receiver stops after your `[AfterTestRun]` hooks. Whatever the SUT exports after that is lost. The helper shortens the exporters' batch delay to 100 ms; with the SDK defaults (5 s for spans) the last scenarios' telemetry would usually still be waiting in the SUT when it stops. Stop the SUT in your `[AfterTestRun]` hook, and stop it gracefully if you can, so that it flushes on exit.
 - Work the SUT does in the background after a step ends (queues, timers) starts in a later window, or outside every window, and is attributed there.
 - The files are written at the end of the run. A run that is aborted before its end writes no files.
-
-## Samples
-
-- [`samples/Aspire`](https://github.com/OWNER/storks-opentelemetry-reqnroll/tree/main/samples/Aspire): two ASP.NET Core services and Postgres started with `Aspire.Hosting.Testing`, Reqnroll scenarios on NUnit, and one scenario (`@demo-failure`) that fails on purpose. The screenshot above is from it. How to run it is in [CONTRIBUTING.md](https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/CONTRIBUTING.md#the-aspire-sample).
-
-Planned: a SUT in Docker, an in-process SUT, Allure reports, and Attribution by trace context. The roadmap will be in GitHub Issues.
-
-## Contributing and license
-
-Build, test and PR instructions are in [CONTRIBUTING.md](https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/CONTRIBUTING.md). Terms such as Observation Window and Attribution are defined in [GLOSSARY.md](https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/GLOSSARY.md). To report a vulnerability, see [SECURITY.md](https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/SECURITY.md).
-
-Licensed under the [MIT License](https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/LICENSE).

@@ -1,0 +1,36 @@
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    ignore:
+      # The package depends on Reqnroll [3.0.0, 4.0); 4.x is excluded until the plugin is verified on it.
+      - dependency-name: "Reqnroll*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      aspire:
+        patterns: ["Aspire.*"]
+      opentelemetry:
+        patterns: ["OpenTelemetry*"]
+      reqnroll:
+        patterns: ["Reqnroll*"]
+      test:
+        patterns: ["Microsoft.NET.Test.Sdk", "NUnit*", "Microsoft.AspNetCore.Mvc.Testing"]
+      other:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/setup-dotnet
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]

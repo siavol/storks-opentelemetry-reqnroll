@@ -38,7 +38,7 @@ public class ViewerIndexReportTests
     private static string? Attribute(JsonNode span, string key)
     {
         var value = span["attributes"]?.AsArray().FirstOrDefault(a => (string?)a!["key"] == key)?["value"];
-        return value is null ? null : (string?)(value["intValue"] ?? value["stringValue"])?.ToString();
+        return value is null ? null : (value["intValue"] ?? value["stringValue"])?.ToString();
     }
 
     /// <summary>The index entry of the When step of the scenario, found through its link in the Reqnroll report.</summary>
@@ -118,12 +118,11 @@ public class ViewerIndexReportTests
     }
 
     [Test]
-    public void Failed_step_of_red_scenario_carries_the_full_error_with_stack_trace_and_its_feature_the_file_path()
+    public void Failed_step_of_red_scenario_carries_the_full_error_with_stack_trace()
     {
         var html = Page();
         var feature = DataBlock(html, "run-index")["features"]!.AsArray()
             .Single(f => f!["scenarios"]!.AsArray().Any(s => (string?)s!["name"] == Red))!;
-        Assert.That((string?)feature["uri"], Is.EqualTo("Features/Checkout.feature"));
         var failed = feature["scenarios"]!.AsArray().Single(s => (string?)s!["name"] == Red)!["steps"]!.AsArray()
             .Single(s => (string?)s!["status"] == "failed")!;
         Assert.That((string?)failed["error"], Does.Contain("Expected").And.Contain(" at App.Specs.Steps.CheckoutSteps"));

@@ -1,3 +1,5 @@
+using Storks.OpenTelemetry.Reqnroll.Core;
+
 namespace Storks.OpenTelemetry.Reqnroll.Tests;
 
 /// <summary>A Window Overlap check that fails on every call, to show that its failures never reach a scenario.</summary>

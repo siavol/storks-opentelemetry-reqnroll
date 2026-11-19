@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Storks.OpenTelemetry.Reqnroll.Core;
 
 namespace Storks.OpenTelemetry.Reqnroll.Tests;
 
@@ -7,7 +8,7 @@ public class RunTrackerTests
     private static readonly DateTimeOffset T0 = new(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);
 
     /// <summary>The README section on the repository, reachable from a package user's test output.</summary>
-    private const string WindowOverlapSection = "https://github.com/OWNER/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap";
+    private const string WindowOverlapSection = "https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap";
 
     private sealed class FakeLinkWriter(bool fail = false) : ILinkWriter
     {
