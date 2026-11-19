@@ -11,6 +11,9 @@ updates:
       # The package depends on Reqnroll [3.0.0, 4.0); 4.x is excluded until the plugin is verified on it.
       - dependency-name: "Reqnroll*"
         update-types: ["version-update:semver-major"]
+      # Bumping Reqnroll itself moves ReqnrollMinVersion (the supported floor), not the tested version.
+      # ReqnrollVersion still moves with Reqnroll.NUnit.
+      - dependency-name: "Reqnroll"
     groups:
       aspire:
         patterns: ["Aspire.*"]
