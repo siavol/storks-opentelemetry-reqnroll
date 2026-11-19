@@ -12,8 +12,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
-    <PackageReference Include="Google.Protobuf" />
-    <PackageReference Include="Grpc.Tools" />
     <ProjectReference Include="..\Orders.Api\Orders.Api.csproj" />
     <ProjectReference Include="..\Pricing.Api\Pricing.Api.csproj" />
   </ItemGroup>
