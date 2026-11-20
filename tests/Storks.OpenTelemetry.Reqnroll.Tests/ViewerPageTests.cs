@@ -134,16 +134,16 @@ public partial class ViewerPageTests
     }
 
     [Test]
-    public void Write_puts_telemetry_html_with_the_received_spans_into_the_report_directory()
+    public void Write_puts_the_viewer_with_the_received_spans_at_the_given_path()
     {
         var dir = Path.Combine(Path.GetTempPath(), "storks-otel-tests", Guid.NewGuid().ToString("N"));
         var (record, run) = RunWithError("boom");
         var store = new TelemetryStore();
         OtlpReceiver.StoreTraces(store, TraceRequest("GET /prices/{sku}")); // the span starts at T0 + 1 ms
 
-        var path = ViewerPage.Write(dir, record, store);
+        var path = Path.Combine(dir, "telemetry.html");
+        ViewerPage.Write(path, record, store);
 
-        Assert.That(Path.GetFileName(path), Is.EqualTo("telemetry.html"));
         var html = File.ReadAllText(path);
         var step = DataBlock(html, "run-index")["features"]![0]!["scenarios"]![0]!["steps"]![0]!;
         Assert.That(step["spanIds"]!.AsArray().Select(x => (string?)x), Is.EqualTo(new[] { "a1a2a3a4a5a6a7a8" }));
@@ -160,7 +160,9 @@ public partial class ViewerPageTests
         OtlpReceiver.StoreLogs(store, LogsRequest(("before the run", 1_000)));
         OtlpReceiver.StoreLogs(store, LogsRequest(("in the hook", 1_794_650_400_007_000_000UL), ("Pricing request failed", 1_794_650_400_003_000_000UL)));
 
-        var html = File.ReadAllText(ViewerPage.Write(dir, record, store));
+        var path = Path.Combine(dir, "telemetry.html");
+        ViewerPage.Write(path, record, store);
+        var html = File.ReadAllText(path);
 
         var scenario = DataBlock(html, "run-index")["features"]![0]!["scenarios"]![0]!;
         var stepLogs = scenario["steps"]![0]!["logIds"]!.AsArray().Select(x => (string)x!).ToList();

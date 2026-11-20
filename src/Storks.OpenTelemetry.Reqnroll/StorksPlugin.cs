@@ -1,3 +1,4 @@
+using System.Reflection;
 using Reqnroll.BoDi;
 using Reqnroll.Configuration;
 using Reqnroll.Events;
@@ -42,7 +43,8 @@ internal sealed class StorksPlugin : IRuntimePlugin
     internal static void RegisterGlobalDependencies(IObjectContainer container, ReqnrollConfiguration configuration)
     {
         container.RegisterTypeAs<TelemetryFormatter, ICucumberMessageFormatter>(TelemetryFormatter.FormatterName);
-        if (!TelemetryFormatter.IsSwitchedOn(container.Resolve<IFormattersConfigurationProvider>()))
+        var formatters = container.Resolve<IFormattersConfigurationProvider>();
+        if (!TelemetryFormatter.IsSwitchedOn(formatters))
         {
             container.RegisterInstanceAs<ITelemetryEndpoint>(new TelemetryEndpoint(null));
             return;
@@ -65,5 +67,11 @@ internal sealed class StorksPlugin : IRuntimePlugin
         container.RegisterInstanceAs(new RunTracker(record, diagnostics));
         container.RegisterInstanceAs(RunOutput.ProcessStreams());
         container.RegisterInstanceAs<ITelemetryEndpoint>(new TelemetryEndpoint(receiver.Endpoint));
+        container.RegisterInstanceAs(ReportFiles.From(formatters.GetFormatterConfigurationByName(TelemetryFormatter.FormatterName),
+            path => ResolveTemplatePlaceholders?.Invoke(formatters, [path]) as string ?? path));
     }
+
+    // Reqnroll 3.3 added placeholders such as {timestamp} to formatter paths; the plugin builds against 3.0, which has none.
+    private static readonly MethodInfo? ResolveTemplatePlaceholders =
+        typeof(IFormattersConfigurationProvider).GetMethod("ResolveTemplatePlaceholders", [typeof(string)]);
 }

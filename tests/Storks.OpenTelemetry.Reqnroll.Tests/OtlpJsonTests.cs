@@ -150,7 +150,7 @@ public class OtlpJsonTests
         OtlpReceiver.StoreTraces(store, TraceRequest("pricing-api"));
         OtlpReceiver.StoreLogs(store, LogsRequest());
 
-        OtlpJsonFiles.Write(dir, store);
+        OtlpJsonFiles.Write(Path.Combine(dir, "traces.jsonl"), Path.Combine(dir, "logs.jsonl"), store);
 
         var traces = File.ReadAllLines(Path.Combine(dir, "traces.jsonl"));
         var logs = File.ReadAllLines(Path.Combine(dir, "logs.jsonl"));
@@ -165,32 +165,30 @@ public class OtlpJsonTests
     {
         var dir = TempDir();
 
-        OtlpJsonFiles.Write(dir, new TelemetryStore());
+        OtlpJsonFiles.Write(Path.Combine(dir, "traces.jsonl"), Path.Combine(dir, "logs.jsonl"), new TelemetryStore());
 
         Assert.That(File.ReadAllText(Path.Combine(dir, "traces.jsonl")), Is.Empty);
         Assert.That(File.ReadAllText(Path.Combine(dir, "logs.jsonl")), Is.Empty);
     }
 
     [Test]
-    public async Task Failure_to_write_the_files_does_not_fail_the_run_hook()
+    public async Task Failure_to_write_the_files_does_not_fail_the_run_and_is_reported_by_a_plugin_line()
     {
         // A regular file where the report directory should be makes every write fail.
         var blocker = TempDir();
         Directory.CreateDirectory(Path.GetDirectoryName(blocker)!);
         await File.WriteAllTextAsync(blocker, "x");
-        var old = Environment.GetEnvironmentVariable(ReportDirectory.Variable);
-        Environment.SetEnvironmentVariable(ReportDirectory.Variable, blocker);
-        try
-        {
-            var store = new TelemetryStore();
-            OtlpReceiver.StoreTraces(store, TraceRequest());
-            await using var receiver = new OtlpReceiver(store);
+        var files = new ReportFiles(Path.Combine(blocker, "telemetry.html"), Path.Combine(blocker, "traces.jsonl"), Path.Combine(blocker, "logs.jsonl"));
+        var store = new TelemetryStore();
+        OtlpReceiver.StoreTraces(store, TraceRequest());
+        await using var receiver = new OtlpReceiver(store);
+        using var errors = new StringWriter();
 
-            var record = new RunRecord();
-            var diagnostics = new PluginDiagnostics();
-            Assert.DoesNotThrowAsync(() => RunHooks.FinishRun(receiver, store, record, diagnostics, new RunTracker(record, diagnostics),
-                new RunOutput(TextWriter.Null, TextWriter.Null)));
-        }
-        finally { Environment.SetEnvironmentVariable(ReportDirectory.Variable, old); }
+        var record = new RunRecord();
+        var diagnostics = new PluginDiagnostics();
+        Assert.DoesNotThrowAsync(() => RunEnd.Finish(files, receiver, store, record, diagnostics, new RunTracker(record, diagnostics),
+            new RunOutput(TextWriter.Null, errors)));
+        Assert.That(errors.ToString(), Does.Contain("[Storks.OpenTelemetry] failed to write the telemetry viewer")
+            .And.Contain("[Storks.OpenTelemetry] failed to write OTLP/JSON telemetry"));
     }
 }

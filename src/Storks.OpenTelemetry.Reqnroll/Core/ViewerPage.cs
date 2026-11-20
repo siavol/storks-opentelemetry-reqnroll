@@ -27,16 +27,14 @@ internal static class ViewerPage
             .Replace(LogsPlaceholder, JsonArray(logs));
     }
 
-    public static string Write(string directory, RunRecord record, TelemetryStore store)
+    public static void Write(string path, RunRecord record, TelemetryStore store)
     {
         // Log ids are positions in the embedded requests, so the index is built from the very snapshot that is embedded.
         var telemetry = store.Snapshot();
         var index = RunIndex.Build(record, telemetry.Spans, telemetry.Logs);
         var html = Render(index, telemetry.TraceRequests, telemetry.LogRequests);
-        Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, TelemetryLinks.PageName);
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         File.WriteAllText(path, html);
-        return path;
     }
 
     private static string JsonArray(IEnumerable<Google.Protobuf.IMessage> requests) =>

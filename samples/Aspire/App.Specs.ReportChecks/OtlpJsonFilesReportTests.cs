@@ -3,7 +3,10 @@ using NUnit.Framework;
 
 namespace App.Specs.ReportChecks;
 
-/// <summary>traces.jsonl and logs.jsonl in the report folder: the whole run's telemetry as OTLP/JSON Lines.</summary>
+/// <summary>
+/// The whole run's telemetry as OTLP/JSON Lines: traces.jsonl at the tracesFilePath of App.Specs/reqnroll.json (reports/otlp),
+/// logs.jsonl at its default, next to the viewer (reports).
+/// </summary>
 public class OtlpJsonFilesReportTests
 {
     private static List<JsonObject> Lines(string file)
@@ -22,7 +25,7 @@ public class OtlpJsonFilesReportTests
     [Test]
     public void Traces_file_is_otlp_json_with_both_services_and_demo_spans()
     {
-        var lines = Lines("traces.jsonl");
+        var lines = Lines(Path.Combine("otlp", "traces.jsonl"));
 
         Assert.That(ServiceNames(lines, "resourceSpans"), Does.Contain("orders-api").And.Contain("pricing-api"));
         var spans = lines.SelectMany(l => l["resourceSpans"]!.AsArray())

@@ -190,6 +190,17 @@ public class ViewerIndexReportTests
     }
 
     [Test]
+    public void Telemetry_the_SUT_exports_while_the_AfterTestRun_hook_stops_it_is_in_the_viewer()
+    {
+        var html = Page();
+        var afterTestRun = DataBlock(html, "run-index")["unattributed"]!["hooks"]!.AsArray()
+            .Single(h => (string?)h!["hookType"] == "AfterTestRun" && (string?)h["name"] == "AppHostHooks.StopAppHost")!;
+
+        Assert.That(afterTestRun["logIds"]!.AsArray().Select(id => Body(Log(html, (string)id!).Log)),
+            Has.Some.Contains("Application is shutting down"), "the files are written after the test project's AfterTestRun hooks");
+    }
+
+    [Test]
     public void Every_scenario_records_the_BeforeScenario_hook_of_the_test_project_with_its_Orders_request_and_no_hook_of_the_plugin()
     {
         var html = Page();

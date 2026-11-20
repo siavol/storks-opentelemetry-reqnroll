@@ -8,13 +8,17 @@ internal static class OtlpJsonFiles
     public const string TracesFileName = "traces.jsonl";
     public const string LogsFileName = "logs.jsonl";
 
-    public static string Write(string directory, TelemetryStore store)
+    public static void Write(string tracesPath, string logsPath, TelemetryStore store)
     {
-        Directory.CreateDirectory(directory);
         var utf8 = new UTF8Encoding(false);
         var telemetry = store.Snapshot();
-        File.WriteAllLines(Path.Combine(directory, TracesFileName), telemetry.TraceRequests.Select(OtlpJson.Serialize), utf8);
-        File.WriteAllLines(Path.Combine(directory, LogsFileName), telemetry.LogRequests.Select(OtlpJson.Serialize), utf8);
-        return directory;
+        WriteLines(tracesPath, telemetry.TraceRequests.Select(OtlpJson.Serialize), utf8);
+        WriteLines(logsPath, telemetry.LogRequests.Select(OtlpJson.Serialize), utf8);
+    }
+
+    private static void WriteLines(string path, IEnumerable<string> lines, Encoding encoding)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        File.WriteAllLines(path, lines, encoding);
     }
 }
