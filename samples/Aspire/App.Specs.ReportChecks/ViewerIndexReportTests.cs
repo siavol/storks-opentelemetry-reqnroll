@@ -174,7 +174,7 @@ public class ViewerIndexReportTests
             Assert.That(unLogs.Where(id => Body(Log(html, id).Log)?.Contains(text) == true), Is.Not.Empty, $"'{text}' is not Unattributed");
             Assert.That(ofScenarios.Where(id => Body(Log(html, id).Log)?.Contains(text) == true), Is.Empty, $"'{text}' is attributed to a scenario");
         }
-        Assert.That(unLogs, Has.None.Matches<string>(ofScenarios.Contains), "a log is both Unattributed and in a scenario");
+        Assert.That(unLogs.Intersect(ofScenarios), Is.Empty, "a log is both Unattributed and in a scenario");
 
         var hooks = un["hooks"]!.AsArray();
         Assert.That(hooks.Select(h => (string?)h!["name"]), Has.None.Contains("RunHooks").And.None.Contains("TelemetryHooks"), "the plugin's own hooks are not recorded");
