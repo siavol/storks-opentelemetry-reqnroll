@@ -39,7 +39,7 @@
     <PackageVersion Include="Reqnroll.NUnit" Version="$(ReqnrollVersion)" />
   </ItemGroup>
 
-  <!-- Aspire sample -->
+  <!-- Aspire sample and the E2E SUT (OpenTelemetry) -->
   <ItemGroup>
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="$(AspireVersion)" />
     <PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />

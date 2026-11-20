@@ -5,6 +5,12 @@
   <Folder Name="/tests/">
     <Project Path="tests/Storks.OpenTelemetry.Reqnroll.Tests/Storks.OpenTelemetry.Reqnroll.Tests.csproj" />
   </Folder>
+  <Folder Name="/tests/E2E/">
+    <Project Path="tests/E2E/Back.Api/Back.Api.csproj" />
+    <Project Path="tests/E2E/Front.Api/Front.Api.csproj" />
+    <Project Path="tests/E2E/E2E.Specs/E2E.Specs.csproj" />
+    <Project Path="tests/E2E/E2E.ReportChecks/E2E.ReportChecks.csproj" />
+  </Folder>
   <Folder Name="/samples/" />
   <Folder Name="/samples/Aspire/">
     <Project Path="samples/Aspire/AppHost/AppHost.csproj" />

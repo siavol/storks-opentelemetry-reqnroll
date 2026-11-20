@@ -1,6 +1,6 @@
 # Reusable E2E: called by ci.yml and release.yml after build.yml.
-# Runs the Aspire sample on the packed nupkg (UseLocalPackage=true), exactly as a user's project consumes it,
-# then the report checks. Ubuntu only: the sample needs Docker (Postgres container).
+# Runs the E2E fixture (tests/E2E) and the Aspire sample on the packed nupkg (UseLocalPackage=true), exactly as a
+# user's project consumes it, then the report checks. Ubuntu only: the sample needs Docker (Postgres container).
 name: E2E
 
 on:
@@ -20,7 +20,7 @@ env:
 
 jobs:
   e2e:
-    name: E2E (Aspire sample on the nupkg)
+    name: E2E (fixture and Aspire sample on the nupkg)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -44,6 +44,21 @@ jobs:
 
       # Restore is not locked in local package mode (the package version changes with every commit);
       # build.yml has already checked the committed lock files with a locked restore.
+      - name: Run E2E.Specs on the nupkg
+        run: |
+          set +e
+          dotnet test tests/E2E/E2E.Specs -p:UseLocalPackage=true \
+            --logger "trx;LogFileName=e2e-specs.trx" --results-directory artifacts/test-results
+          echo "dotnet test exited with $? (non-zero is expected: @expected-failure fails by design; checked next)"
+
+      # The @expected-failure scenario in tests/E2E/E2E.Specs/Features/Quotes.feature fails on purpose: the report checks
+      # assert its red step. Update the name here if that scenario is renamed.
+      - name: Check that only @expected-failure is red
+        run: python3 -I .github/scripts/only-expected-red.py artifacts/test-results/e2e-specs.trx CustomerGetsAQuoteForASKUWhosePriceCannotBeFetched
+
+      - name: E2E report checks
+        run: dotnet test tests/E2E/E2E.ReportChecks
+
       - name: Run App.Specs on the nupkg
         run: |
           set +e
@@ -53,24 +68,9 @@ jobs:
 
       # The @demo-failure scenario in samples/Aspire/App.Specs/Features/Checkout.feature fails on purpose, so the
       # report shows a red scenario. It is kept in the run because the report checks assert that red scenario.
-      # Here: that exact scenario failed and every other test passed. Update EXPECTED_RED if that scenario is renamed.
+      # Here: that exact scenario failed and every other test passed. Update the name here if that scenario is renamed.
       - name: Check that only @demo-failure is red
-        env:
-          TRX: artifacts/test-results/app-specs.trx
-          EXPECTED_RED: CustomerPlacesAnOrderForASKUWhosePriceCannotBeFetched
-        shell: python
-        run: |
-          import os, sys, xml.etree.ElementTree as ET
-          # "{*}" matches the trx XML namespace without spelling out its URI.
-          results = ET.parse(os.environ["TRX"]).getroot().findall(".//{*}UnitTestResult")
-          outcomes = {r.get("testName"): r.get("outcome") for r in results}
-          print("\n".join(f"{o:>8}  {n}" for n, o in sorted(outcomes.items())))
-          red = sorted(n for n, o in outcomes.items() if o != "Passed")
-          expected = [os.environ["EXPECTED_RED"]]
-          # The red scenario plus at least one passing test: a run that lost its other tests must not pass.
-          min_tests = 2
-          if red != expected or len(outcomes) < min_tests:
-              sys.exit(f"::error::Expected exactly {expected} to fail and all other tests to pass; not passed: {red}")
+        run: python3 -I .github/scripts/only-expected-red.py artifacts/test-results/app-specs.trx CustomerPlacesAnOrderForASKUWhosePriceCannotBeFetched
 
       - name: Report checks
         run: dotnet test samples/Aspire/App.Specs.ReportChecks
@@ -81,6 +81,7 @@ jobs:
         with:
           name: e2e-reports
           path: |
+            tests/E2E/E2E.Specs/bin/Debug/net11.0/reports/
             samples/Aspire/App.Specs/bin/Debug/net11.0/reports/
             artifacts/test-results/
           if-no-files-found: ignore

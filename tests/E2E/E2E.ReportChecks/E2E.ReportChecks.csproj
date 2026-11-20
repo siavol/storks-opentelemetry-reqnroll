@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Reads the reports of an E2E.Specs run; does not run E2E.Specs itself.
+    Run E2E.Specs first (its expected red scenario fails), then:  dotnet test tests/E2E/E2E.ReportChecks
+    Override the report location with E2E_REPORT_DIR.
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit3TestAdapter" />
+  </ItemGroup>
+</Project>
