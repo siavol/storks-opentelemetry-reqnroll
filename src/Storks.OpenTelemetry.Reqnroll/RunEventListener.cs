@@ -6,22 +6,14 @@ using Storks.OpenTelemetry.Reqnroll.Core;
 namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>
-/// Writes the link as an <c>&lt;a href&gt;</c> log line via <c>WriteLine</c> (<c>text/x.cucumber.log+plain</c>) to the step or
-/// hook currently running. Reqnroll's HTML report renders log messages as HTML, so the link is clickable there; an attached
-/// file is not (<c>text/html</c> is shown as escaped source, <c>text/uri-list</c> is unreachable via AddAttachment).
+/// Records the run and feature hooks from Reqnroll's events; scenarios, steps and their hooks come from the Cucumber
+/// Messages (<see cref="RunMessages"/>). Never throws: a plugin error must not change a test result.
 /// </summary>
-internal sealed class ReqnrollLinkWriter(IReqnrollOutputHelper output) : ILinkWriter
-{
-    public void WriteLink(string link) =>
-        output.WriteLine($"<a href=\"{System.Net.WebUtility.HtmlEncode(link)}\">Open telemetry</a>");
-}
-
-/// <summary>Records the run from Reqnroll's events. Never throws: a plugin error must not change a test result.</summary>
-internal sealed class RunEventListener(RunTracker tracker, RunRecord record, PluginDiagnostics diagnostics) : IAsyncExecutionEventListener
+internal sealed class RunEventListener(RunTracker tracker, PluginDiagnostics diagnostics) : IAsyncExecutionEventListener
 {
     /// <summary>
-    /// Start of the hook running now. The listener belongs to one test thread, and its hooks (run, feature and scenario
-    /// ones) run one after another, so one pending start is enough.
+    /// Start of the hook running now. The listener belongs to one test thread, and its hooks run one after another,
+    /// so one pending start is enough.
     /// </summary>
     private DateTimeOffset? _hookStart;
 
@@ -31,18 +23,6 @@ internal sealed class RunEventListener(RunTracker tracker, RunRecord record, Plu
         {
             switch (executionEvent)
             {
-                case ScenarioStartedEvent started:
-                    ReqnrollScenario.Run(started.ScenarioContext, record);
-                    break;
-                case StepStartedEvent started:
-                    ReqnrollScenario.State(started.ScenarioContext).StepStart = DateTimeOffset.UtcNow;
-                    break;
-                case StepFinishedEvent finished:
-                    OnStepFinished(finished);
-                    break;
-                case ScenarioFinishedEvent finished:
-                    OnScenarioFinished(finished);
-                    break;
                 case HookBindingStartedEvent:
                     _hookStart = DateTimeOffset.UtcNow;
                     break;
@@ -58,23 +38,8 @@ internal sealed class RunEventListener(RunTracker tracker, RunRecord record, Plu
         return Task.CompletedTask;
     }
 
-    private void OnStepFinished(StepFinishedEvent finished)
-    {
-        var context = finished.ScenarioContext;
-        var run = ReqnrollScenario.Run(context, record);
-        var stepStart = ReqnrollScenario.State(context).StepStart ?? DateTimeOffset.UtcNow;
-        var status = ReqnrollScenario.Status(finished.StepContext.Status);
-        var error = status == RunStatus.Failed ? ReqnrollScenario.ErrorText(context.TestError) : null;
-        var output = context.ScenarioContainer.Resolve<IReqnrollOutputHelper>();
-
-        tracker.StepFinished(run, new ReqnrollLinkWriter(output),
-            finished.StepContext.StepInfo.StepDefinitionType.ToString(), finished.StepContext.StepInfo.Text,
-            stepStart, DateTimeOffset.UtcNow, status, error);
-    }
-
-    /// <summary>Hooks of a scenario; run and feature hooks lie outside scenario windows and go to the run record.</summary>
-    private static bool IsScenarioHook(HookType type) => type is HookType.BeforeScenario or HookType.AfterScenario
-        or HookType.BeforeScenarioBlock or HookType.AfterScenarioBlock or HookType.BeforeStep or HookType.AfterStep;
+    private static bool IsRunOrFeatureHook(HookType type) =>
+        type is HookType.BeforeTestRun or HookType.AfterTestRun or HookType.BeforeFeature or HookType.AfterFeature;
 
     private void OnHookFinished(HookBindingFinishedEvent finished)
     {
@@ -82,19 +47,21 @@ internal sealed class RunEventListener(RunTracker tracker, RunRecord record, Plu
         var start = _hookStart ?? end - finished.Duration;
         _hookStart = null;
         var binding = finished.HookBinding;
+        if (!IsRunOrFeatureHook(binding.HookType)) return;
         var hook = new HookRun(binding.HookType.ToString(), binding.Method.Type.Name + "." + binding.Method.Name, start, end,
-            ReqnrollScenario.Status(finished.HookStatus));
-        var run = IsScenarioHook(binding.HookType) ? ReqnrollScenario.Run(finished.ContextManager.ScenarioContext, record) : null;
-        tracker.HookFinished(run, hook, AssemblyName(binding.Method.Type.AssemblyName));
+            Status(finished.HookStatus));
+        tracker.HookFinished(hook, AssemblyName(binding.Method.Type.AssemblyName));
     }
 
     private static string AssemblyName(string? name) => (name ?? "").Split(',')[0].Trim();
 
-    private void OnScenarioFinished(ScenarioFinishedEvent finished)
+    private static string Status(ScenarioExecutionStatus status) => status switch
     {
-        var context = finished.ScenarioContext;
-        var run = ReqnrollScenario.Run(context, record);
-        var status = ReqnrollScenario.Status(context.ScenarioExecutionStatus);
-        tracker.ScenarioFinished(run, DateTimeOffset.UtcNow, status, status == RunStatus.Failed ? ReqnrollScenario.ErrorText(context.TestError) : null);
-    }
+        ScenarioExecutionStatus.OK => RunStatus.Passed,
+        ScenarioExecutionStatus.TestError => RunStatus.Failed,
+        ScenarioExecutionStatus.BindingError => RunStatus.Failed,
+        ScenarioExecutionStatus.UndefinedStep => RunStatus.Undefined,
+        ScenarioExecutionStatus.StepDefinitionPending => RunStatus.Pending,
+        _ => RunStatus.Skipped,
+    };
 }

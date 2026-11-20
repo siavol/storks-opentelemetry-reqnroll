@@ -9,7 +9,7 @@ namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>
 /// The Telemetry Formatter, switched on by an <c>opentelemetry</c> entry in Reqnroll's <c>formatters</c> configuration.
-/// It reads no messages yet: when the run finishes it writes the files (<see cref="RunEnd"/>) from what the plugin collected.
+/// It collects the Cucumber Messages of the run; when the run finishes it builds the run record from them and writes the files (<see cref="RunEnd"/>).
 /// </summary>
 internal sealed class TelemetryFormatter(IFormattersConfigurationProvider configurationProvider, IFormatterLog logger, IObjectContainer container)
     : FormatterBase(configurationProvider, logger, FormatterName)
@@ -29,8 +29,9 @@ internal sealed class TelemetryFormatter(IFormattersConfigurationProvider config
     // AfterTestRun hooks and then waits for this task.
     protected override async Task ConsumeAndFormatMessagesBackgroundTask(CancellationToken cancellationToken)
     {
-        await foreach (var _ in PostedMessages.Reader.ReadAllAsync(cancellationToken)) { }
+        var messages = new RunMessages();
+        await foreach (var envelope in PostedMessages.Reader.ReadAllAsync(cancellationToken)) messages.Add(envelope);
         await RunEnd.Finish(container.Resolve<ReportFiles>(), container.Resolve<OtlpReceiver>(), container.Resolve<TelemetryStore>(),
-            container.Resolve<RunRecord>(), container.Resolve<PluginDiagnostics>(), container.Resolve<RunTracker>(), container.Resolve<RunOutput>());
+            messages, container.Resolve<RunRecord>(), container.Resolve<PluginDiagnostics>(), container.Resolve<RunTracker>(), container.Resolve<RunOutput>());
     }
 }

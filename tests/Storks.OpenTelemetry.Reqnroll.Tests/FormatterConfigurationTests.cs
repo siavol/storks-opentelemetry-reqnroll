@@ -1,6 +1,5 @@
 using NUnit.Framework;
 using Reqnroll.BoDi;
-using Reqnroll.Configuration;
 using Reqnroll.Formatters.Configuration;
 using Storks.OpenTelemetry.Reqnroll.Core;
 using Storks.OpenTelemetry.Reqnroll.Receiver;
@@ -34,9 +33,9 @@ public class FormatterConfigurationTests
         return container;
     }
 
-    private static ITelemetryEndpoint Configure(ObjectContainer container, ReqnrollConfiguration? configuration = null)
+    private static ITelemetryEndpoint Configure(ObjectContainer container)
     {
-        StorksPlugin.RegisterGlobalDependencies(container, configuration ?? ConfigurationLoader.GetDefault());
+        StorksPlugin.RegisterGlobalDependencies(container);
         return container.Resolve<ITelemetryEndpoint>();
     }
 
@@ -52,14 +51,12 @@ public class FormatterConfigurationTests
     public void Without_an_opentelemetry_entry_the_plugin_is_off_and_starts_no_receiver()
     {
         using var container = Container(enabled: true, "html", "message");
-        var configuration = ConfigurationLoader.GetDefault();
 
-        var endpoint = Configure(container, configuration);
+        var endpoint = Configure(container);
 
         Assert.That(endpoint.IsEnabled, Is.False);
         Assert.That(endpoint.GetExporterEnvironment(), Is.Empty);
         Assert.That(container.IsRegistered<OtlpReceiver>(), Is.False);
-        Assert.That(configuration.AdditionalStepAssemblies, Is.Empty, "the plugin's hooks are not bound");
     }
 
     [Test]
@@ -78,15 +75,13 @@ public class FormatterConfigurationTests
     public async Task With_an_opentelemetry_entry_the_plugin_is_on_and_points_the_exporter_at_its_receiver()
     {
         using var container = Container(enabled: true, "opentelemetry");
-        var configuration = ConfigurationLoader.GetDefault();
 
-        var endpoint = Configure(container, configuration);
+        var endpoint = Configure(container);
         await using var receiver = container.Resolve<OtlpReceiver>();
 
         Assert.That(endpoint.IsEnabled, Is.True);
         Assert.That(endpoint.Endpoint, Is.EqualTo(receiver.Endpoint));
         Assert.That(endpoint.GetExporterEnvironment()["OTEL_EXPORTER_OTLP_ENDPOINT"], Is.EqualTo(receiver.Endpoint.ToString().TrimEnd('/')));
-        Assert.That(configuration.AdditionalStepAssemblies, Has.Member(typeof(StorksPlugin).Assembly.FullName));
     }
 
     [Test]

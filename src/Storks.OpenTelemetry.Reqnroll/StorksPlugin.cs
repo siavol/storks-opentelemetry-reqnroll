@@ -1,6 +1,5 @@
 using System.Reflection;
 using Reqnroll.BoDi;
-using Reqnroll.Configuration;
 using Reqnroll.Events;
 using Reqnroll.Formatters;
 using Reqnroll.Formatters.Configuration;
@@ -22,17 +21,15 @@ internal sealed class StorksPlugin : IRuntimePlugin
         UnitTestProviderConfiguration unitTestProviderConfiguration)
     {
         runtimePluginEvents.CustomizeGlobalDependencies += (_, args) =>
-            RegisterGlobalDependencies(args.ObjectContainer, args.ReqnrollConfiguration);
+            RegisterGlobalDependencies(args.ObjectContainer);
 
-        // An async listener, because output (the step link) written on StepFinishedEvent lands on the Gherkin step
-        // itself; written from an AfterStep hook it would land on the hook's test step. Subscribed before
-        // CucumberMessagePublisher, so it runs first; samples/Aspire/App.Specs.ReportChecks guard this order.
+        // Records the run and feature hook windows; everything else comes from the Cucumber Messages.
         runtimePluginEvents.CustomizeTestThreadDependencies += (_, args) =>
         {
             var container = args.ObjectContainer;
             if (!container.Resolve<ITelemetryEndpoint>().IsEnabled) return;
             container.Resolve<ITestThreadExecutionEventPublisher>()
-                .AddListener(new RunEventListener(container.Resolve<RunTracker>(), container.Resolve<RunRecord>(), container.Resolve<PluginDiagnostics>()));
+                .AddListener(new RunEventListener(container.Resolve<RunTracker>(), container.Resolve<PluginDiagnostics>()));
         };
     }
 
@@ -40,7 +37,7 @@ internal sealed class StorksPlugin : IRuntimePlugin
     /// Decides once, from Reqnroll's formatters configuration, whether the plugin is on. Reqnroll launches the formatters
     /// right after this point, before any hook. Off, only a switched-off <see cref="ITelemetryEndpoint"/> is registered.
     /// </summary>
-    internal static void RegisterGlobalDependencies(IObjectContainer container, ReqnrollConfiguration configuration)
+    internal static void RegisterGlobalDependencies(IObjectContainer container)
     {
         container.RegisterTypeAs<TelemetryFormatter, ICucumberMessageFormatter>(TelemetryFormatter.FormatterName);
         var formatters = container.Resolve<IFormattersConfigurationProvider>();
@@ -49,9 +46,6 @@ internal sealed class StorksPlugin : IRuntimePlugin
             container.RegisterInstanceAs<ITelemetryEndpoint>(new TelemetryEndpoint(null));
             return;
         }
-
-        // Binds the [Binding] hooks in this assembly; binding discovery reads this list after this point.
-        configuration.AdditionalStepAssemblies.Add(typeof(StorksPlugin).Assembly.FullName!);
 
         var store = new TelemetryStore();
         var diagnostics = new PluginDiagnostics();

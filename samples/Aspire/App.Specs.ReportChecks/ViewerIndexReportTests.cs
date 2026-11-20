@@ -41,15 +41,12 @@ public class ViewerIndexReportTests
         return value is null ? null : (value["intValue"] ?? value["stringValue"])?.ToString();
     }
 
-    /// <summary>The index entry of the When step of the scenario, found through its link in the Reqnroll report.</summary>
+    /// <summary>The index entry of the When step of the scenario.</summary>
     private static JsonNode WhenStep(string html, string scenarioName)
     {
-        var link = CucumberMessages.Load().TelemetryLinks(scenarioName).Single(l => l.StepText?.StartsWith("the customer orders", StringComparison.Ordinal) == true).Link;
-        var hash = link.Split('#')[1].Split('&').Select(p => p.Split('=')).ToDictionary(p => p[0], p => p[1]);
-
         var scenario = DataBlock(html, "run-index")["features"]!.AsArray()
-            .SelectMany(f => f!["scenarios"]!.AsArray()).Single(s => (string?)s!["id"] == hash["s"])!;
-        var step = scenario["steps"]!.AsArray().Single(s => (int)s!["number"]! == int.Parse(hash["step"], CultureInfo.InvariantCulture))!;
+            .SelectMany(f => f!["scenarios"]!.AsArray()).Single(s => (string?)s!["name"] == scenarioName)!;
+        var step = scenario["steps"]!.AsArray().Single(s => ((string?)s!["text"])?.StartsWith("the customer orders", StringComparison.Ordinal) == true)!;
         Assert.That((string?)step["keyword"], Is.EqualTo("When"));
         return step;
     }

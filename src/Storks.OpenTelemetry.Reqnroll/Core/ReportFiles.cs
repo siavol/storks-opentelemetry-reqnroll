@@ -15,7 +15,7 @@ internal sealed record ReportFiles(string Viewer, string Traces, string Logs)
                 ? Path.GetFullPath(resolvePlaceholders(path))
                 : null;
 
-        var viewer = Configured("outputFilePath") ?? Path.GetFullPath(Path.Combine("reports", TelemetryLinks.PageName));
+        var viewer = Configured("outputFilePath") ?? Path.GetFullPath(Path.Combine("reports", "telemetry.html"));
         var directory = Path.GetDirectoryName(viewer)!;
         return new ReportFiles(viewer,
             Configured("tracesFilePath") ?? Path.Combine(directory, OtlpJsonFiles.TracesFileName),

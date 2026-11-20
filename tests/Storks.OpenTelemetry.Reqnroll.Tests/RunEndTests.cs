@@ -18,18 +18,18 @@ public class RunEndTests
         var record = new RunRecord();
         var diagnostics = new PluginDiagnostics();
         var tracker = new RunTracker(record, diagnostics);
-        tracker.WindowOpened(record.Begin("Checkout", "Pay by card", [], T0), T0);
-        tracker.WindowOpened(record.Begin("Pricing", "Apply discount", [], T0), T0.AddMilliseconds(10));
+        tracker.WindowOpened(record.Begin("Checkout", "Pay by card", [], T0));
+        tracker.WindowOpened(record.Begin("Pricing", "Apply discount", [], T0.AddMilliseconds(10)));
         using var info = new StringWriter();
         using var errors = new StringWriter();
         await using var receiver = new OtlpReceiver(store);
 
-        await RunEnd.Finish(files, receiver, store, record, diagnostics, tracker, new RunOutput(info, errors));
+        await RunEnd.Finish(files, receiver, store, new RunMessages(), record, diagnostics, tracker, new RunOutput(info, errors));
 
         Assert.That(new[] { files.Viewer, files.Traces, files.Logs }.Select(File.Exists), Is.All.True);
         Assert.That(Lines(info), Has.Some.EqualTo($"[Storks.OpenTelemetry] telemetry viewer written to {files.Viewer}"));
         Assert.That(Lines(errors), Has.One.StartWith("[Storks.OpenTelemetry] Window Overlap: 1 scenario window"),
-            "the summary; the scenario's own warning was drained here too, since no scenario hook flushed it");
+            "the summary, after the scenario's own warning");
     }
 
     [Test]

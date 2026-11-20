@@ -1,13 +1,7 @@
 namespace Storks.OpenTelemetry.Reqnroll.Core;
 
-/// <summary>Writes a link into the test report as a log message of the step or hook currently running.</summary>
-internal interface ILinkWriter
-{
-    void WriteLink(string link);
-}
-
 /// <summary>
-/// Records the run and hands out links. Reqnroll-independent so it can be tested directly.
+/// Records run and feature hooks and checks scenario windows for Window Overlap. Reqnroll-independent so it can be tested directly.
 /// Failures are reported through <see cref="PluginDiagnostics"/> and never propagate: they must not change a result.
 /// </summary>
 internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics, IWindowOverlap? overlap = null)
@@ -16,31 +10,17 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
 
     private static readonly string PluginAssembly = typeof(RunTracker).Assembly.GetName().Name!;
 
-    public void StepFinished(ScenarioRun run, ILinkWriter writer, string keyword, string text,
-        DateTimeOffset start, DateTimeOffset end, string status, string? error)
-    {
-        int number;
-        try { number = run.AddStep(keyword, text, start, end, status, error); }
-        catch (Exception ex) { diagnostics.Report($"failed to record step '{text}': {ex.Message}"); return; }
-        Write(writer, TelemetryLinks.Step(run.Id, number), $"step '{text}'");
-    }
-
-    /// <summary>Records the test project's hooks only: the plugin's own would show up as noise in every scenario.</summary>
-    public void HookFinished(ScenarioRun? run, HookRun hook, string assembly)
+    /// <summary>Records the test project's run and feature hooks only: the plugin's own would show up as noise.</summary>
+    public void HookFinished(HookRun hook, string assembly)
     {
         if (assembly == PluginAssembly) return;
-        try
-        {
-            if (run is null) record.AddRunHook(hook);
-            else run.AddHook(hook);
-        }
+        try { record.AddRunHook(hook); }
         catch (Exception ex) { diagnostics.Report($"failed to record hook '{hook.Name}': {ex.Message}"); }
     }
 
-    /// <summary>Opens the scenario's Observation Window and warns about Window Overlap (Attribution is unchanged).</summary>
-    public void WindowOpened(ScenarioRun run, DateTimeOffset start)
+    /// <summary>The scenario's Observation Window opened; warns about Window Overlap (Attribution is unchanged).</summary>
+    public void WindowOpened(ScenarioRun run)
     {
-        run.OpenWindow(start);
         try
         {
             if (_overlap.Opened(run) is { } warning) diagnostics.Report(warning);
@@ -48,11 +28,10 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
         catch (Exception ex) { diagnostics.Report($"failed to check Window Overlap of scenario '{run.Name}': {ex.Message}"); }
     }
 
-    /// <summary>Closes the scenario's Observation Window, before the plugin's own AfterScenario hooks.</summary>
-    public void WindowClosed(ScenarioRun run, DateTimeOffset end)
+    public void WindowClosed(ScenarioRun run)
     {
-        run.CloseWindow(end);
-        LeaveOverlapCheck(run);
+        try { _overlap.Closed(run); }
+        catch (Exception ex) { diagnostics.Report($"failed to check Window Overlap of scenario '{run.Name}': {ex.Message}"); }
     }
 
     public string? WindowOverlapSummary()
@@ -63,28 +42,5 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
             diagnostics.Report($"failed to summarize Window Overlap: {ex.Message}");
             return null;
         }
-    }
-
-    private void LeaveOverlapCheck(ScenarioRun run)
-    {
-        try { _overlap.Closed(run); }
-        catch (Exception ex) { diagnostics.Report($"failed to check Window Overlap of scenario '{run.Name}': {ex.Message}"); }
-    }
-
-    public void WriteScenarioLink(ScenarioRun run, ILinkWriter writer) =>
-        Write(writer, TelemetryLinks.Scenario(run.Id), $"scenario '{run.Name}'");
-
-    public void ScenarioFinished(ScenarioRun run, DateTimeOffset end, string status, string? error)
-    {
-        try { run.Finish(end, status, error); }
-        catch (Exception ex) { diagnostics.Report($"failed to record scenario '{run.Name}': {ex.Message}"); }
-        // A scenario whose closing hook did not run must not count as running for the rest of the run.
-        LeaveOverlapCheck(run);
-    }
-
-    private void Write(ILinkWriter writer, string link, string what)
-    {
-        try { writer.WriteLink(link); }
-        catch (Exception ex) { diagnostics.Report($"failed to write telemetry link of {what}: {ex.Message}"); }
     }
 }
