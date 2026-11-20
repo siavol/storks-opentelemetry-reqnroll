@@ -11,30 +11,11 @@ public class RunTrackerTests
     private const string WindowOverlapSection = "https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap";
 
     [Test]
-    public void Run_and_feature_hook_calls_are_recorded_on_the_run_but_hooks_of_the_plugin_are_not()
-    {
-        var record = new RunRecord(T0);
-        var tracker = new RunTracker(record, new PluginDiagnostics());
-
-        tracker.HookFinished(new HookRun("BeforeTestRun", "AppHostHooks.StartAppHost", T0, T0.AddSeconds(5), "passed"), "App.Specs");
-        tracker.HookFinished(new HookRun("BeforeFeature", "FeatureHooks.Seed", T0.AddSeconds(6), T0.AddSeconds(7), "passed"), "App.Specs");
-        tracker.HookFinished(new HookRun("AfterTestRun", "RunHooks.FinishRun", T0.AddSeconds(9), T0.AddSeconds(10), "passed"),
-            typeof(RunTracker).Assembly.GetName().Name!);
-
-        Assert.That(record.Start, Is.EqualTo(T0));
-        Assert.That(record.RunHooks(), Is.EqualTo(new[]
-        {
-            new HookRun("BeforeTestRun", "AppHostHooks.StartAppHost", T0, T0.AddSeconds(5), "passed"),
-            new HookRun("BeforeFeature", "FeatureHooks.Seed", T0.AddSeconds(6), T0.AddSeconds(7), "passed"),
-        }));
-    }
-
-    [Test]
     public void Window_opened_while_another_is_open_warns_with_both_scenarios_and_the_readme_section()
     {
         var diagnostics = new PluginDiagnostics();
         var record = new RunRecord();
-        var tracker = new RunTracker(record, diagnostics);
+        var tracker = new RunTracker(diagnostics);
 
         tracker.WindowOpened(record.Begin("Checkout", "Pay by card", [], T0));
         tracker.WindowOpened(record.Begin("Pricing", "Apply discount", [], T0.AddMilliseconds(10)));
@@ -53,7 +34,7 @@ public class RunTrackerTests
     {
         var diagnostics = new PluginDiagnostics();
         var record = new RunRecord();
-        var tracker = new RunTracker(record, diagnostics, new FailingWindowOverlap());
+        var tracker = new RunTracker(diagnostics, new FailingWindowOverlap());
         var run = record.Begin("F", "S", [], T0);
 
         Assert.DoesNotThrow(() => tracker.WindowOpened(run));

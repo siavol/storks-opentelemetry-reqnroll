@@ -157,7 +157,7 @@ public class RunMessagesTests
     {
         var record = new RunRecord(T0);
         var diagnostics = new PluginDiagnostics();
-        var tracker = new RunTracker(record, diagnostics);
+        var tracker = new RunTracker(diagnostics);
         var messages = new RunMessages();
         foreach (var envelope in envelopes) messages.Add(envelope);
         messages.Record(record, tracker, diagnostics);
@@ -251,6 +251,70 @@ public class RunMessagesTests
             Is.EqualTo(new[] { ("passed", UnixNano(1000), 3, 2), ("failed", UnixNano(1050), 3, 2) }));
         Assert.That(scenarios[1].Steps[0].StartUnixNano, Is.EqualTo(UnixNano(1070)));
         Assert.That(tracker.WindowOverlapSummary(), Does.StartWith("Window Overlap: 1 scenario window opened"));
+    }
+
+    private static Envelope RunHookStarted(string id, string hookId, double ms) =>
+        E(new { testRunHookStarted = new { id, testRunStartedId = "run", hookId, timestamp = Ts(ms) } });
+
+    private static Envelope RunHookFinished(string startedId, double ms, string status = "PASSED") =>
+        E(new
+        {
+            testRunHookFinished = new
+            {
+                testRunHookStartedId = startedId,
+                result = new { status, duration = new { seconds = 0, nanos = 0 } },
+                timestamp = Ts(ms),
+            },
+        });
+
+    [Test]
+    public void BeforeTestRun_and_AfterTestRun_hooks_get_their_windows_on_the_unattributed_scale()
+    {
+        var (record, _) = Read(
+        [
+            Hook("h-start", "BEFORE_TEST_RUN", "App.Specs.App.Specs.Hooks.AppHostHooks", "StartAppHost"),
+            Hook("h-stop", "AFTER_TEST_RUN", "App.Specs.App.Specs.Hooks.AppHostHooks", "StopAppHost"),
+            RunHookStarted("r1", "h-start", 0), RunHookFinished("r1", 500),
+            RunHookStarted("r2", "h-stop", 900), RunHookFinished("r2", 1000, "FAILED"),
+        ]);
+
+        var hooks = RunIndex.Build(record).Unattributed.Hooks;
+        Assert.That(hooks.Select(h => (h.HookType, h.Name, h.Status, h.StartUnixNano, h.EndUnixNano)), Is.EqualTo(new[]
+        {
+            ("BeforeTestRun", "AppHostHooks.StartAppHost", "passed", UnixNano(0), UnixNano(500)),
+            ("AfterTestRun", "AppHostHooks.StopAppHost", "failed", UnixNano(900), UnixNano(1000)),
+        }));
+    }
+
+    [Test]
+    public void Repeated_feature_hook_whose_finish_points_at_the_first_start_gets_a_window_per_run()
+    {
+        // Reqnroll's TestRunHookFinished of a repeated [BeforeFeature] refers to the id of its first start.
+        var (record, _) = Read(
+        [
+            Hook("h-seed", "BEFORE_TEST_RUN", "App.Specs.App.Specs.Hooks.FeatureHooks", "Seed"),
+            RunHookStarted("f1", "h-seed", 100), RunHookFinished("f1", 200),
+            RunHookStarted("f2", "h-seed", 300), RunHookFinished("f1", 450),
+        ]);
+
+        var hooks = RunIndex.Build(record).Unattributed.Hooks;
+        Assert.That(hooks.Select(h => (h.Name, h.StartUnixNano, h.EndUnixNano)), Is.EqualTo(new[]
+        {
+            ("FeatureHooks.Seed", UnixNano(100), UnixNano(200)),
+            ("FeatureHooks.Seed", UnixNano(300), UnixNano(450)),
+        }));
+    }
+
+    [Test]
+    public void Run_hook_without_a_finish_is_not_in_the_index()
+    {
+        var (record, _) = Read(
+        [
+            Hook("h-start", "BEFORE_TEST_RUN", "App.Specs.App.Specs.Hooks.AppHostHooks", "StartAppHost"),
+            RunHookStarted("r1", "h-start", 0),
+        ]);
+
+        Assert.That(RunIndex.Build(record).Unattributed.Hooks, Is.Empty);
     }
 
     [Test]

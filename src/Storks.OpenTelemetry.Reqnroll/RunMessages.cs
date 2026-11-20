@@ -20,6 +20,8 @@ internal sealed class RunMessages
     private readonly Dictionary<string, Timestamp> _finished = [];
     private readonly Dictionary<(string TestCaseStartedId, string TestStepId), Timestamp> _stepStarted = [];
     private readonly Dictionary<(string TestCaseStartedId, string TestStepId), TestStepFinished> _stepFinished = [];
+    private readonly List<TestRunHookStarted> _runHookStarted = [];
+    private readonly List<TestRunHookFinished> _runHookFinished = [];
 
     public void Add(Envelope envelope)
     {
@@ -31,6 +33,8 @@ internal sealed class RunMessages
         else if (envelope.TestCaseFinished is { } finished) _finished[finished.TestCaseStartedId] = finished.Timestamp;
         else if (envelope.TestStepStarted is { } stepStarted) _stepStarted[(stepStarted.TestCaseStartedId, stepStarted.TestStepId)] = stepStarted.Timestamp;
         else if (envelope.TestStepFinished is { } stepFinished) _stepFinished[(stepFinished.TestCaseStartedId, stepFinished.TestStepId)] = stepFinished;
+        else if (envelope.TestRunHookStarted is { } hookStarted) _runHookStarted.Add(hookStarted);
+        else if (envelope.TestRunHookFinished is { } hookFinished) _runHookFinished.Add(hookFinished);
     }
 
     private void AddDocument(GherkinDocument document)
@@ -56,10 +60,14 @@ internal sealed class RunMessages
 
     /// <summary>
     /// Adds a scenario run per <c>TestCaseStarted</c> (so every retry attempt is a run of its own) and passes the
-    /// scenario windows to the Window Overlap check in time order. A test case run that cannot be read is reported and skipped.
+    /// scenario windows to the Window Overlap check in time order; adds the run and feature hook calls. A test case run
+    /// or hook call that cannot be read is reported and skipped.
     /// </summary>
     public void Record(RunRecord record, RunTracker tracker, PluginDiagnostics diagnostics)
     {
+        try { RecordRunHooks(record); }
+        catch (System.Exception ex) { diagnostics.Report($"failed to read run and feature hooks from Cucumber Messages: {ex.Message}"); }
+
         var runs = new List<ScenarioRun>();
         foreach (var started in _started.OrderBy(s => Time(s.Timestamp)))
         {
@@ -72,6 +80,26 @@ internal sealed class RunMessages
         {
             if (opens) tracker.WindowOpened(run);
             else tracker.WindowClosed(run);
+        }
+    }
+
+    /// <summary>
+    /// Pairs each hook finish with the earliest still open start of the same hook, else with the start it names: Reqnroll's
+    /// finish of a repeated [BeforeFeature]/[AfterFeature] names the first call's start. Exact when hooks run one after another;
+    /// in a parallel run calls of the same hook may be mixed up. A start without a finish is left out.
+    /// </summary>
+    private void RecordRunHooks(RunRecord record)
+    {
+        var starts = _runHookStarted.ToDictionary(s => s.Id);
+        var open = _runHookStarted.OrderBy(s => Time(s.Timestamp)).ToList();
+        foreach (var finished in _runHookFinished.OrderBy(f => Time(f.Timestamp)))
+        {
+            if (!starts.TryGetValue(finished.TestRunHookStartedId, out var named)) continue;
+            var started = open.FirstOrDefault(s => s.HookId == named.HookId) ?? named;
+            open.Remove(started);
+            if (!_hooks.TryGetValue(started.HookId, out var hook)) continue;
+            record.AddRunHook(new HookRun(HookType(hook.Type), HookName(hook), Time(started.Timestamp), Time(finished.Timestamp),
+                Status(finished.Result.Status)));
         }
     }
 
@@ -135,13 +163,15 @@ internal sealed class RunMessages
         _ => RunStatus.Skipped,
     };
 
-    /// <summary>Reqnroll's names of scenario and step hooks; run and feature hooks come from the execution events for now.</summary>
+    /// <summary>Reqnroll's hook names; run and feature hooks are both BEFORE_TEST_RUN/AFTER_TEST_RUN in the messages.</summary>
     private static string HookType(Io.Cucumber.Messages.Types.HookType? type) => type switch
     {
         Io.Cucumber.Messages.Types.HookType.BEFORE_TEST_CASE => "BeforeScenario",
         Io.Cucumber.Messages.Types.HookType.AFTER_TEST_CASE => "AfterScenario",
         Io.Cucumber.Messages.Types.HookType.BEFORE_TEST_STEP => "BeforeStep",
         Io.Cucumber.Messages.Types.HookType.AFTER_TEST_STEP => "AfterStep",
+        Io.Cucumber.Messages.Types.HookType.BEFORE_TEST_RUN => "BeforeTestRun",
+        Io.Cucumber.Messages.Types.HookType.AFTER_TEST_RUN => "AfterTestRun",
         _ => type?.ToString() ?? "",
     };
 

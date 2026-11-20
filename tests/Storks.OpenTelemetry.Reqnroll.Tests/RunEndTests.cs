@@ -17,7 +17,7 @@ public class RunEndTests
         var store = new TelemetryStore();
         var record = new RunRecord();
         var diagnostics = new PluginDiagnostics();
-        var tracker = new RunTracker(record, diagnostics);
+        var tracker = new RunTracker(diagnostics);
         tracker.WindowOpened(record.Begin("Checkout", "Pay by card", [], T0));
         tracker.WindowOpened(record.Begin("Pricing", "Apply discount", [], T0.AddMilliseconds(10)));
         using var info = new StringWriter();
