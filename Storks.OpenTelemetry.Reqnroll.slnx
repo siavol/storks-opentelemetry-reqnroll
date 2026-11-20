@@ -19,4 +19,8 @@
     <Project Path="samples/Aspire/ServiceDefaults/ServiceDefaults.csproj" />
     <Project Path="samples/Aspire/App.Specs/App.Specs.csproj" />
   </Folder>
+  <Folder Name="/samples/InProcess/">
+    <Project Path="samples/InProcess/Prices.Api/Prices.Api.csproj" />
+    <Project Path="samples/InProcess/Prices.Specs/Prices.Specs.csproj" />
+  </Folder>
 </Solution>

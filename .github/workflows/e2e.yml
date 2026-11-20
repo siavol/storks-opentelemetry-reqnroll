@@ -1,6 +1,6 @@
 # Reusable E2E: called by ci.yml and release.yml after build.yml.
 # Runs the E2E fixture (tests/E2E) and its report checks on the packed nupkg (UseLocalPackage=true), exactly as a
-# user's project consumes it, then the Aspire sample as a smoke test. Ubuntu only: the sample needs Docker (Postgres container).
+# user's project consumes it, then the Aspire and In-process samples as smoke tests. Ubuntu only: the Aspire sample needs Docker (Postgres container).
 name: E2E
 
 on:
@@ -75,6 +75,12 @@ jobs:
       - name: Check that the sample wrote telemetry.html
         run: test -s samples/Aspire/App.Specs/bin/Debug/net11.0/reports/telemetry.html
 
+      - name: Run the In-process sample on the nupkg
+        run: dotnet test samples/InProcess/Prices.Specs -p:UseLocalPackage=true
+
+      - name: Check that the In-process sample wrote telemetry.html
+        run: test -s samples/InProcess/Prices.Specs/bin/Debug/net11.0/reports/telemetry.html
+
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -83,5 +89,6 @@ jobs:
           path: |
             tests/E2E/E2E.Specs/bin/Debug/net11.0/reports/
             samples/Aspire/App.Specs/bin/Debug/net11.0/reports/
+            samples/InProcess/Prices.Specs/bin/Debug/net11.0/reports/
             artifacts/test-results/
           if-no-files-found: ignore

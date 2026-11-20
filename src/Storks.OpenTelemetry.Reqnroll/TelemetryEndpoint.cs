@@ -32,8 +32,8 @@ public interface ITelemetryEndpoint
 /// <param name="endpoint">The receiver's address; <c>null</c> when the plugin is off.</param>
 internal sealed class TelemetryEndpoint(Uri? endpoint) : ITelemetryEndpoint
 {
-    // Exporter defaults are 5 s (spans) and 1 s (logs): the last scenarios' telemetry would miss the end of the run.
-    private const string BatchDelayMilliseconds = "100";
+    private static readonly string BatchDelay =
+        ReqnrollExporterExtensions.BatchDelayMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     public bool IsEnabled => endpoint is not null;
 
@@ -44,7 +44,7 @@ internal sealed class TelemetryEndpoint(Uri? endpoint) : ITelemetryEndpoint
     {
         ["OTEL_EXPORTER_OTLP_ENDPOINT"] = Endpoint.ToString().TrimEnd('/'),
         ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "http/protobuf",
-        ["OTEL_BSP_SCHEDULE_DELAY"] = BatchDelayMilliseconds,
-        ["OTEL_BLRP_SCHEDULE_DELAY"] = BatchDelayMilliseconds,
+        ["OTEL_BSP_SCHEDULE_DELAY"] = BatchDelay,
+        ["OTEL_BLRP_SCHEDULE_DELAY"] = BatchDelay,
     };
 }

@@ -7,6 +7,9 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter" />
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <!-- The plugin depends on a Reqnroll range; run on the concrete ReqnrollVersion instead of its lower bound. -->
     <PackageReference Include="Reqnroll" VersionOverride="$(ReqnrollVersion)" />
     <ProjectReference Include="..\..\src\Storks.OpenTelemetry.Reqnroll\Storks.OpenTelemetry.Reqnroll.csproj" />
