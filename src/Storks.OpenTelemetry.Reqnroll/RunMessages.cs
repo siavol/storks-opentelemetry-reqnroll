@@ -22,10 +22,12 @@ internal sealed class RunMessages
     private readonly Dictionary<(string TestCaseStartedId, string TestStepId), TestStepFinished> _stepFinished = [];
     private readonly List<TestRunHookStarted> _runHookStarted = [];
     private readonly List<TestRunHookFinished> _runHookFinished = [];
+    private Timestamp? _runStarted;
 
     public void Add(Envelope envelope)
     {
-        if (envelope.GherkinDocument is { } document) AddDocument(document);
+        if (envelope.TestRunStarted is { } runStarted) _runStarted = runStarted.Timestamp;
+        else if (envelope.GherkinDocument is { } document) AddDocument(document);
         else if (envelope.Pickle is { } pickle) _pickles[pickle.Id] = pickle;
         else if (envelope.Hook is { } hook) _hooks[hook.Id] = hook;
         else if (envelope.TestCase is { } testCase) _testCases[testCase.Id] = testCase;
@@ -59,11 +61,14 @@ internal sealed class RunMessages
     }
 
     /// <summary>
-    /// Adds a scenario run per test case attempt and the run and feature hook calls, and passes the scenario windows to
-    /// the Window Overlap check. What cannot be read is reported and skipped.
+    /// The run record of the messages, and its scenario windows passed to the Window Overlap check.
+    /// What cannot be read is reported and skipped.
     /// </summary>
-    public void Record(RunRecord record, RunTracker tracker, PluginDiagnostics diagnostics)
+    public RunRecord Record(RunTracker tracker, PluginDiagnostics diagnostics)
     {
+        // TestRunStarted precedes every hook, so the viewer's scale starts before BeforeTestRun.
+        var start = _runStarted ?? _started.Select(s => s.Timestamp).Concat(_runHookStarted.Select(h => h.Timestamp)).MinBy(Order);
+        var record = start is null ? new RunRecord() : new RunRecord(Time(start));
         RecordRunHooks(record, diagnostics);
 
         var runs = new List<ScenarioRun>();
@@ -80,6 +85,7 @@ internal sealed class RunMessages
             if (opens) tracker.WindowOpened(run);
             else tracker.WindowClosed(run);
         }
+        return record;
     }
 
     /// <summary>

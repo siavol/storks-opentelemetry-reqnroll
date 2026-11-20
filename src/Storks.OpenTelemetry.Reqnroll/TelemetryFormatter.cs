@@ -32,6 +32,6 @@ internal sealed class TelemetryFormatter(IFormattersConfigurationProvider config
         var messages = new RunMessages();
         await foreach (var envelope in PostedMessages.Reader.ReadAllAsync(cancellationToken)) messages.Add(envelope);
         await RunEnd.Finish(container.Resolve<ReportFiles>(), container.Resolve<OtlpReceiver>(), container.Resolve<TelemetryStore>(),
-            messages, container.Resolve<RunRecord>(), container.Resolve<PluginDiagnostics>(), container.Resolve<RunTracker>(), container.Resolve<RunOutput>());
+            container.Resolve<PluginDiagnostics>(), messages, container.Resolve<RunOutput>());
     }
 }

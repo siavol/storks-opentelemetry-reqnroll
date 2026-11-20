@@ -184,9 +184,7 @@ public class OtlpJsonTests
         await using var receiver = new OtlpReceiver(store);
         using var errors = new StringWriter();
 
-        var record = new RunRecord();
-        var diagnostics = new PluginDiagnostics();
-        await Assert.DoesNotThrowAsync(() => RunEnd.Finish(files, receiver, store, new RunMessages(), record, diagnostics, new RunTracker(diagnostics),
+        await Assert.DoesNotThrowAsync(() => RunEnd.Finish(files, receiver, store, new PluginDiagnostics(), new RunMessages(),
             new RunOutput(TextWriter.Null, errors)));
         Assert.That(errors.ToString(), Does.Contain("[Storks.OpenTelemetry] failed to write the telemetry viewer")
             .And.Contain("[Storks.OpenTelemetry] failed to write OTLP/JSON telemetry"));

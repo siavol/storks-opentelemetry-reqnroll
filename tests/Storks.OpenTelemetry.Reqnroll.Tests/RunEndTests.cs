@@ -1,3 +1,4 @@
+using Io.Cucumber.Messages.Types;
 using NUnit.Framework;
 using Storks.OpenTelemetry.Reqnroll.Core;
 using Storks.OpenTelemetry.Reqnroll.Receiver;
@@ -7,8 +8,6 @@ namespace Storks.OpenTelemetry.Reqnroll.Tests;
 /// <summary>The end-of-run lines go to the plugin's run output, each with the plugin's prefix, and stay few.</summary>
 public class RunEndTests
 {
-    private static readonly DateTimeOffset T0 = new(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);
-
     [Test]
     public async Task Run_without_problems_writes_the_files_where_configured_and_exactly_one_line()
     {
@@ -25,9 +24,9 @@ public class RunEndTests
     public async Task Window_Overlap_gives_one_summary_line_with_the_count_and_no_line_per_scenario()
     {
         var run = new Run();
-        run.Tracker.WindowOpened(run.Record.Begin("Checkout", "Pay by card", [], T0));
-        run.Tracker.WindowOpened(run.Record.Begin("Pricing", "Apply discount", [], T0.AddMilliseconds(10)));
-        run.Tracker.WindowOpened(run.Record.Begin("Pricing", "Apply coupon", [], T0.AddMilliseconds(20)));
+        Envelope[] threeOverlapping = [.. RunMessagesTests.Definitions(), .. RunMessagesTests.Attempt("s1", 0),
+            .. RunMessagesTests.Attempt("s2", 10), .. RunMessagesTests.Attempt("s3", 20)];
+        foreach (var envelope in threeOverlapping) run.Messages.Add(envelope);
 
         await run.Finish();
 
@@ -82,9 +81,8 @@ public class RunEndTests
     private sealed class Run
     {
         public ReportFiles Files { get; }
-        public RunRecord Record { get; } = new();
+        public RunMessages Messages { get; } = new();
         public PluginDiagnostics Diagnostics { get; } = new();
-        public RunTracker Tracker { get; }
         public StringWriter Info { get; } = new();
         public StringWriter Errors { get; } = new();
 
@@ -92,14 +90,13 @@ public class RunEndTests
         {
             var dir = Path.Combine(Path.GetTempPath(), "storks-otel-tests", Guid.NewGuid().ToString("N"));
             Files = new ReportFiles(Path.Combine(dir, "v", "run.html"), Path.Combine(dir, "t", "traces.jsonl"), Path.Combine(dir, "logs.jsonl"));
-            Tracker = new RunTracker(Diagnostics);
         }
 
         public async Task Finish()
         {
             var store = new TelemetryStore();
             await using var receiver = new OtlpReceiver(store);
-            await RunEnd.Finish(Files, receiver, store, new RunMessages(), Record, Diagnostics, Tracker, new RunOutput(Info, Errors));
+            await RunEnd.Finish(Files, receiver, store, Diagnostics, Messages, new RunOutput(Info, Errors));
         }
     }
 

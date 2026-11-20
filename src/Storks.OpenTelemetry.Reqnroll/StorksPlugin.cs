@@ -43,12 +43,9 @@ internal sealed class StorksPlugin : IRuntimePlugin
         // Started here, i.e. before any hook can run.
         receiver.StartAsync().GetAwaiter().GetResult();
 
-        var record = new RunRecord();
         container.RegisterInstanceAs(store);
         container.RegisterInstanceAs(receiver);
         container.RegisterInstanceAs(diagnostics);
-        container.RegisterInstanceAs(record);
-        container.RegisterInstanceAs(new RunTracker(diagnostics));
         container.RegisterInstanceAs(RunOutput.ProcessStreams());
         container.RegisterInstanceAs<ITelemetryEndpoint>(new TelemetryEndpoint(receiver.Endpoint));
         container.RegisterInstanceAs(ReportFiles.From(formatters.GetFormatterConfigurationByName(TelemetryFormatter.FormatterName),

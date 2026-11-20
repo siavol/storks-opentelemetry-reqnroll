@@ -132,8 +132,11 @@ public class RunMessagesTests
             },
         });
 
-    private static Envelope[] Definitions() =>
+    private static Envelope RunStarted(double ms) => E(new { testRunStarted = new { timestamp = Ts(ms) } });
+
+    internal static Envelope[] Definitions() =>
     [
+        RunStarted(0),
         Hook("h-before", "BEFORE_TEST_CASE", "App.Specs.App.Specs.Hooks.OrdersReadinessHooks", "EnsureOrdersAnswers"),
         Hook("h-after", "AFTER_TEST_CASE", "App.Specs.App.Specs.Hooks.DataHooks", "Cleanup"),
         Document(),
@@ -142,7 +145,7 @@ public class RunMessagesTests
     ];
 
     /// <summary>One run of test case tc1 from <paramref name="at"/>: hook [0,10], steps [20,30], [40,50], [60,70], hook [80,90], finished at 100.</summary>
-    private static Envelope[] Attempt(string startedId, double at, string lastStatus = "PASSED", object? exception = null, bool willBeRetried = false) =>
+    internal static Envelope[] Attempt(string startedId, double at, string lastStatus = "PASSED", object? exception = null, bool willBeRetried = false) =>
     [
         CaseStarted(startedId, "tc1", at),
         StepStarted(startedId, "tc1-before", at), StepFinished(startedId, "tc1-before", at + 10),
@@ -162,17 +165,26 @@ public class RunMessagesTests
 
     private static (RunRecord Record, RunTracker Tracker, IReadOnlyList<string> Problems) ReadWithProblems(IEnumerable<Envelope> envelopes)
     {
-        var record = new RunRecord(T0);
         var diagnostics = new PluginDiagnostics();
         var tracker = new RunTracker(diagnostics);
         var messages = new RunMessages();
         foreach (var envelope in envelopes) messages.Add(envelope);
-        messages.Record(record, tracker, diagnostics);
+        var record = messages.Record(tracker, diagnostics);
         return (record, tracker, diagnostics.Drain());
     }
 
     private static string UnixNano(double ms) =>
         ((T0.AddTicks((long)Math.Round(ms * TimeSpan.TicksPerMillisecond)) - DateTimeOffset.UnixEpoch).Ticks * 100).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    [Test]
+    public void The_run_scale_starts_at_TestRunStarted_and_without_it_at_the_earliest_start()
+    {
+        var (withRunStarted, _) = Read([.. Definitions(), .. Attempt("s1", 1000)]);
+        var (withoutRunStarted, _) = Read([.. Definitions().Skip(1), .. Attempt("s1", 1000)]);
+
+        Assert.That(RunIndex.Build(withRunStarted).Unattributed.StartUnixNano, Is.EqualTo(UnixNano(0)));
+        Assert.That(RunIndex.Build(withoutRunStarted).Unattributed.StartUnixNano, Is.EqualTo(UnixNano(1000)));
+    }
 
     [Test]
     public void Scenario_steps_and_scenario_hooks_get_their_windows_names_and_tags_from_the_messages()

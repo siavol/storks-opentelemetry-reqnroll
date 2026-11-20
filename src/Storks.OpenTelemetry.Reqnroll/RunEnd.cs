@@ -9,8 +9,8 @@ internal static class RunEnd
     // TestRunFinished comes after the test project's AfterTestRun hooks, so telemetry flushed by the SUT while shutting
     // down has been received. No pause is needed here: stopping the SUT waits for its processes, which export what they
     // have before exiting.
-    public static async Task Finish(ReportFiles files, OtlpReceiver receiver, TelemetryStore store, RunMessages messages, RunRecord record,
-        PluginDiagnostics diagnostics, RunTracker tracker, RunOutput output)
+    public static async Task Finish(ReportFiles files, OtlpReceiver receiver, TelemetryStore store, PluginDiagnostics diagnostics,
+        RunMessages messages, RunOutput output)
     {
         try
         {
@@ -21,9 +21,11 @@ internal static class RunEnd
             output.Error($"failed to stop the receiver: {ex.GetType().Name}: {ex.Message}");
         }
 
+        var tracker = new RunTracker(diagnostics);
+        var record = new RunRecord();
         try
         {
-            messages.Record(record, tracker, diagnostics);
+            record = messages.Record(tracker, diagnostics);
         }
         catch (Exception ex)
         {

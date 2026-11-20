@@ -66,7 +66,7 @@ internal sealed class ScenarioRun
 /// <summary>
 /// Thread-safe record of the test run (the source of the run index): every scenario run and the run and feature hook
 /// calls (BeforeTestRun, BeforeFeature, AfterFeature, AfterTestRun) of the test project. <see cref="Start"/> is the start
-/// of the run's scale in the viewer: the record is created when the plugin starts, before any hook runs.
+/// of the run's scale in the viewer, before any hook runs.
 /// </summary>
 internal sealed class RunRecord(DateTimeOffset start)
 {
