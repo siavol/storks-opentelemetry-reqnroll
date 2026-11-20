@@ -19,7 +19,6 @@ public static class SutHooks
     {
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(web =>
             web.ConfigureServices(services => services.AddOpenTelemetry().UseReqnrollExporter(telemetry)));
-        _factory.StartServer();
     }
 
     // Disposing the factory flushes the SUT's last telemetry before the plugin writes the report.

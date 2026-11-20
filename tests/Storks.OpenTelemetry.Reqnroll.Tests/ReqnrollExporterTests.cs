@@ -44,7 +44,7 @@ public class ReqnrollExporterTests
     }
 
     [Test]
-    public void With_the_formatter_off_the_SUT_still_creates_spans_and_logs()
+    public void With_the_formatter_off_the_SUT_runs_without_errors()
     {
         Assert.DoesNotThrow(() => RunSut(new TelemetryEndpoint(null), _ => { }));
     }
@@ -59,7 +59,7 @@ public class ReqnrollExporterTests
 
         using (var provider = services.BuildServiceProvider())
         {
-            provider.GetRequiredService<TracerProvider>();
+            provider.GetRequiredService<TracerProvider>(); // the tracer provider is built lazily, on first resolve
             var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("InProcess.Sut.Orders");
             using var source = new ActivitySource(Source);
             using (source.StartActivity("GET /orders")) OrderPlaced(logger, null);

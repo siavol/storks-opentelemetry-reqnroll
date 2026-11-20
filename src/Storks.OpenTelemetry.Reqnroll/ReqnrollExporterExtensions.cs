@@ -8,7 +8,9 @@ namespace Storks.OpenTelemetry.Reqnroll;
 /// <summary>Points an In-process SUT's OpenTelemetry at the plugin's receiver.</summary>
 public static class ReqnrollExporterExtensions
 {
-    private const int BatchDelayMilliseconds = 100; // as in ITelemetryEndpoint.GetExporterEnvironment
+    // Exporter defaults are 5 s (spans) and 1 s (logs): the last scenarios' telemetry would miss the end of the run.
+    // GetExporterEnvironment passes the same delay to an Out-of-process SUT.
+    internal const int BatchDelayMilliseconds = 100;
 
     /// <summary>
     /// Exports the SUT's traces and logs to the plugin's receiver over <c>http/protobuf</c>, with span and log batch

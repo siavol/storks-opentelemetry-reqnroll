@@ -72,9 +72,12 @@ public static void StartSut(ITelemetryEndpoint telemetry)
         web.ConfigureServices(services => services.AddOpenTelemetry().UseReqnrollExporter(telemetry)));
 }
 
-// Disposing the factory flushes the application's last telemetry into the report.
+// Disposing the factory flushes the application's last telemetry before the plugin writes the report.
 [AfterTestRun]
-public static async Task StopSut() => await _factory!.DisposeAsync();
+public static async Task StopSut()
+{
+    if (_factory is not null) await _factory.DisposeAsync();
+}
 ```
 
 While the formatter is switched off (step 3), `telemetry.IsEnabled` is false: the map is empty and `UseReqnrollExporter` adds nothing, so the hook stays the same either way.

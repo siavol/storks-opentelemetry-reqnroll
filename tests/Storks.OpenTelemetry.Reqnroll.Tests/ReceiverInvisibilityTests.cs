@@ -17,7 +17,7 @@ public class ReceiverInvisibilityTests
     public async Task Receiver_requests_are_invisible_to_asp_net_core_instrumentation_of_an_in_process_sut()
     {
         var exported = new List<Activity>();
-        using var sut = Sdk.CreateTracerProviderBuilder()
+        using var tracerProvider = Sdk.CreateTracerProviderBuilder()
             .AddAspNetCoreInstrumentation()
             .AddInMemoryExporter(exported)
             .Build();
@@ -28,9 +28,9 @@ public class ReceiverInvisibilityTests
         var content = new ByteArrayContent(new ExportTraceServiceRequest().ToByteArray());
         content.Headers.ContentType = new MediaTypeHeaderValue("application/x-protobuf");
         var response = await http.PostAsync(new Uri(receiver.Endpoint, "v1/traces"), content);
-        sut!.ForceFlush();
+        tracerProvider.ForceFlush();
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        Assert.That(exported.Where(a => a.GetTagItem("server.port") is int port && port == receiver.Endpoint.Port), Is.Empty);
+        Assert.That(exported, Is.Empty);
     }
 }
