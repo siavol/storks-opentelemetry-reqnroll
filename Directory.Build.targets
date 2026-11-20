@@ -1,6 +1,6 @@
 <Project>
   <!--
-    Samples reference the plugin like a user would: <PackageReference Include="Storks.OpenTelemetry.Reqnroll" />.
+    A project may reference the plugin like a user would: <PackageReference Include="Storks.OpenTelemetry.Reqnroll" />.
     This file decides what that reference resolves to.
 
     Default (project mode): the PackageReference is swapped for a ProjectReference to src/, so the plugin can be
@@ -18,11 +18,8 @@
       is re-evaluated on every restore (RestoreForceEvaluate), so the floating version moves to the newest
       package. Locked-mode restore of the same dependencies is verified in project mode.
   -->
-  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))"
-          Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../')))" />
-
   <PropertyGroup>
-    <StorksPluginProject>$(MSBuildThisFileDirectory)../src/Storks.OpenTelemetry.Reqnroll/Storks.OpenTelemetry.Reqnroll.csproj</StorksPluginProject>
+    <StorksPluginProject>$(MSBuildThisFileDirectory)src/Storks.OpenTelemetry.Reqnroll/Storks.OpenTelemetry.Reqnroll.csproj</StorksPluginProject>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(UseLocalPackage)' != 'true' and '@(PackageReference->WithMetadataValue('Identity', 'Storks.OpenTelemetry.Reqnroll'))' != ''">
@@ -31,8 +28,8 @@
   </ItemGroup>
 
   <PropertyGroup Condition="'$(UseLocalPackage)' == 'true'">
-    <StorksLocalFeed Condition="'$(StorksLocalFeed)' == ''">$(MSBuildThisFileDirectory)../artifacts/packages</StorksLocalFeed>
-    <StorksLocalRestoreDir Condition="'$(StorksLocalRestoreDir)' == ''">$(MSBuildThisFileDirectory)../artifacts/samples-packages</StorksLocalRestoreDir>
+    <StorksLocalFeed Condition="'$(StorksLocalFeed)' == ''">$(MSBuildThisFileDirectory)artifacts/packages</StorksLocalFeed>
+    <StorksLocalRestoreDir Condition="'$(StorksLocalRestoreDir)' == ''">$(MSBuildThisFileDirectory)artifacts/samples-packages</StorksLocalRestoreDir>
     <StorksPackageVersion Condition="'$(StorksPackageVersion)' == ''">*-*</StorksPackageVersion>
     <RestoreAdditionalProjectSources>$([System.IO.Path]::GetFullPath('$(StorksLocalFeed)'))</RestoreAdditionalProjectSources>
     <RestorePackagesPath>$([System.IO.Path]::GetFullPath('$(StorksLocalRestoreDir)'))</RestorePackagesPath>

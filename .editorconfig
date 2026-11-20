@@ -106,7 +106,7 @@ dotnet_naming_style.underscore_camel.capitalization = camel_case
 dotnet_naming_style.underscore_camel.required_prefix = _
 
 # Test projects: targeted relaxations, each with its reason.
-[{tests/**.cs,samples/Aspire/App.Sut.Tests/**.cs,samples/Aspire/App.Specs.ReportChecks/**.cs}]
+[tests/**.cs]
 # Test names are sentences (Every_step_has_one_telemetry_link); underscores keep them readable in test output.
 dotnet_diagnostic.CA1707.severity = none
 # Expected values are written inline in the assertion that uses them (Is.EqualTo(new[] { "step" })).

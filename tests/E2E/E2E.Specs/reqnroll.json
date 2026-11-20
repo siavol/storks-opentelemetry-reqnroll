@@ -1,0 +1,7 @@
+{
+  "$schema": "https://schemas.reqnroll.net/reqnroll-config-latest.json",
+  "formatters": {
+    "message": { "outputFilePath": "reports/reqnroll_report.ndjson" },
+    "opentelemetry": { "outputFilePath": "reports/telemetry.html" }
+  }
+}
