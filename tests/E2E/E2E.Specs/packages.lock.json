@@ -262,6 +262,7 @@
         "type": "Project",
         "dependencies": {
           "Google.Protobuf": "[3.36.2, )",
+          "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.21.0, )",
           "Reqnroll": "[3.0.0, 4.0.0)"
         }
       },

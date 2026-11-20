@@ -14,6 +14,8 @@ namespace Storks.OpenTelemetry.Reqnroll.Tests;
 public class ReqnrollExporterTests
 {
     private const string Source = "InProcess.Sut";
+    private static readonly Action<ILogger, Exception?> OrderPlaced =
+        LoggerMessage.Define(LogLevel.Information, default, "order placed");
 
     [Test]
     public async Task Spans_and_logs_of_an_in_process_SUT_reach_the_receiver()
@@ -60,7 +62,7 @@ public class ReqnrollExporterTests
             provider.GetRequiredService<TracerProvider>();
             var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("InProcess.Sut.Orders");
             using var source = new ActivitySource(Source);
-            using (source.StartActivity("GET /orders")) logger.LogInformation("order placed");
+            using (source.StartActivity("GET /orders")) OrderPlaced(logger, null);
         }
     }
 
