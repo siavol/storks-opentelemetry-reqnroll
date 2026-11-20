@@ -40,7 +40,7 @@ internal sealed class TelemetryEndpoint(Uri? endpoint) : ITelemetryEndpoint
     public Uri Endpoint => endpoint ?? throw new InvalidOperationException(
         "The telemetry receiver is not running: add an 'opentelemetry' entry to the Reqnroll formatters configuration.");
 
-    public IReadOnlyDictionary<string, string> GetExporterEnvironment() => !IsEnabled ? new Dictionary<string, string>() : new Dictionary<string, string>
+    public IReadOnlyDictionary<string, string> GetExporterEnvironment() => !IsEnabled ? [] : new Dictionary<string, string>
     {
         ["OTEL_EXPORTER_OTLP_ENDPOINT"] = Endpoint.ToString().TrimEnd('/'),
         ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "http/protobuf",

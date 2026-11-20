@@ -11,14 +11,14 @@ public class ViewerIndexReportTests
     private const string Red = "Customer places an order for a SKU whose price cannot be fetched";
     private const string Green = "Customer places an order for a regular SKU";
 
-    private static string Page()
+    internal static string Page()
     {
         var path = Path.Combine(CucumberMessages.ReportDirectory, "telemetry.html");
         Assert.That(File.Exists(path), $"Run samples/Aspire/App.Specs first. Not found: {path}");
         return File.ReadAllText(path);
     }
 
-    private static JsonNode DataBlock(string html, string id)
+    internal static JsonNode DataBlock(string html, string id)
     {
         var m = Regex.Match(html, $"<script type=\"application/json\" id=\"{id}\">(.*?)</script>", RegexOptions.Singleline);
         Assert.That(m.Success, $"telemetry.html has no data block {id}");

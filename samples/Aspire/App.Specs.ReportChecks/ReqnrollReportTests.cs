@@ -1,5 +1,3 @@
-using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 using NUnit.Framework;
 
 namespace App.Specs.ReportChecks;
@@ -22,10 +20,7 @@ public class ReqnrollReportTests
     [Test]
     public void Viewer_has_every_scenario_of_the_report_with_its_own_id_and_the_failed_one()
     {
-        var path = Path.Combine(CucumberMessages.ReportDirectory, "telemetry.html");
-        Assert.That(File.Exists(path), $"Run samples/Aspire/App.Specs first. Not found: {path}");
-        var m = Regex.Match(File.ReadAllText(path), "<script type=\"application/json\" id=\"run-index\">(.*?)</script>", RegexOptions.Singleline);
-        var scenarios = JsonNode.Parse(m.Groups[1].Value)!["features"]!.AsArray().SelectMany(f => f!["scenarios"]!.AsArray()).ToList();
+        var scenarios = ViewerIndexReportTests.DataBlock(ViewerIndexReportTests.Page(), "run-index")["features"]!.AsArray().SelectMany(f => f!["scenarios"]!.AsArray()).ToList();
 
         Assert.That(scenarios.Select(s => (string?)s!["name"]), Is.EquivalentTo(CucumberMessages.Load().ScenarioNames()));
         Assert.That(scenarios.Select(s => (string?)s!["id"]), Is.Unique.And.All.Match("^[0-9a-f]{32}$"));
