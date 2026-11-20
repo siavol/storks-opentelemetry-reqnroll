@@ -1,12 +1,10 @@
 flowchart LR
     subgraph tests["Test process (dotnet test)"]
         scenarios["Reqnroll scenarios"]
-        plugin["Plugin: Observation Windows"]
+        plugin["Telemetry Formatter:<br/>Observation Windows"]
         receiver["OTLP receiver<br/>127.0.0.1:random port"]
-        scenarios -- "scenario and step start/end" --> plugin
+        scenarios -- "Cucumber Messages:<br/>scenario and step start/end" --> plugin
         receiver --> plugin
     end
     sut["Your SUT"] -- "traces and logs<br/>OTLP/HTTP protobuf" --> receiver
-    plugin -- "end of run" --> files["reports/<br/>telemetry.html<br/>traces.jsonl, logs.jsonl"]
-    scenarios --> report["Reqnroll HTML formatter:<br/>reqnroll_report.html"]
-    report -. "Open telemetry links" .-> files
+    plugin -- "TestRunFinished" --> files["reports/<br/>telemetry.html<br/>traces.jsonl, logs.jsonl"]
