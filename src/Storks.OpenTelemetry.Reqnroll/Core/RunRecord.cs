@@ -8,7 +8,7 @@ internal sealed record HookRun(string HookType, string Name, DateTimeOffset Star
 
 /// <summary>
 /// One run of a scenario. Outline examples and retries are separate runs, each with its own <see cref="Id"/>.
-/// A run is built by one thread from the Cucumber Messages, so the run itself needs no locking.
+/// The run record is built by one thread from the Cucumber Messages, at the end of the run.
 /// </summary>
 internal sealed class ScenarioRun
 {
@@ -64,13 +64,12 @@ internal sealed class ScenarioRun
 }
 
 /// <summary>
-/// Thread-safe record of the test run (the source of the run index): every scenario run and the run and feature hook
+/// Record of the test run (the source of the run index): every scenario run and the run and feature hook
 /// calls (BeforeTestRun, BeforeFeature, AfterFeature, AfterTestRun) of the test project. <see cref="Start"/> is the start
 /// of the run's scale in the viewer, before any hook runs.
 /// </summary>
 internal sealed class RunRecord(DateTimeOffset start)
 {
-    private readonly Lock _gate = new();
     private readonly List<ScenarioRun> _runs = [];
     private readonly List<HookRun> _runHooks = [];
 
@@ -80,24 +79,24 @@ internal sealed class RunRecord(DateTimeOffset start)
 
     public void AddRunHook(HookRun hook)
     {
-        lock (_gate) _runHooks.Add(hook);
+        _runHooks.Add(hook);
     }
 
     /// <summary>Run and feature hook calls, by start time.</summary>
     public IReadOnlyList<HookRun> RunHooks()
     {
-        lock (_gate) return _runHooks.OrderBy(h => h.Start).ToArray();
+        return _runHooks.OrderBy(h => h.Start).ToArray();
     }
 
     public ScenarioRun Begin(string feature, string name, IReadOnlyList<string> tags, DateTimeOffset start)
     {
         var run = new ScenarioRun(feature, name, tags, start);
-        lock (_gate) _runs.Add(run);
+        _runs.Add(run);
         return run;
     }
 
     public IReadOnlyList<ScenarioRun> Snapshot()
     {
-        lock (_gate) return _runs.ToArray();
+        return _runs.ToArray();
     }
 }
