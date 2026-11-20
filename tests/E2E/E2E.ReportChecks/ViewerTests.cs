@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Nodes;
 using NUnit.Framework;
 
@@ -110,5 +111,61 @@ public class ViewerTests
             s.Service == "back-api" && (int?)s.Span["kind"] == Server && Attribute(s.Span, "http.response.status_code") == "200"), "no Back server span with 200");
         Assert.That(step["logIds"]!.AsArray().Select(id => Log((string)id!).Service).Distinct(),
             Is.SupersetOf(new[] { "front-api", "back-api" }), "logs of both services in the When step");
+    }
+
+    private static string? Body(JsonNode log) => (string?)log["body"]?["stringValue"];
+
+    private static ulong Nanos(JsonNode? value) => ulong.Parse((string)value!, CultureInfo.InvariantCulture);
+
+    /// <summary>Services that logged a message containing the text in the window.</summary>
+    private IEnumerable<string> ServicesLogging(JsonNode window, string text) =>
+        window["logIds"]!.AsArray().Select(id => Log((string)id!)).Where(l => Body(l.Log)?.Contains(text) == true).Select(l => l.Service);
+
+    [Test]
+    public void Startup_telemetry_is_Unattributed_in_the_BeforeTestRun_window_and_not_attributed_to_any_scenario()
+    {
+        var unattributed = Reports.DataBlock(_html, "run-index")["unattributed"]!;
+        var unLogs = unattributed["logIds"]!.AsArray().Select(x => (string)x!).ToList();
+        var ofScenarios = Reports.Scenarios(_html).SelectMany(s => s["logIds"]!.AsArray()).Select(x => (string)x!).ToHashSet();
+        const string Started = "Application started";
+
+        Assert.That(unLogs.Select(id => Body(Log(id).Log)), Has.Some.Contains(Started), "the SUT start is not Unattributed");
+        Assert.That(ofScenarios.Select(id => Body(Log(id).Log)), Has.None.Contains(Started), "the SUT start is attributed to a scenario");
+        Assert.That(unLogs.Intersect(ofScenarios), Is.Empty, "a log is both Unattributed and in a scenario");
+
+        var hooks = unattributed["hooks"]!.AsArray();
+        Assert.That(hooks.Select(h => ((string?)h!["hookType"], (string?)h["name"])),
+            Is.EquivalentTo(new[] { ("BeforeTestRun", "SutHooks.StartSut"), ("AfterTestRun", "SutHooks.StopSut") }), "only the test project's run hooks, none of the plugin");
+        var beforeTestRun = hooks.Single(h => (string?)h!["hookType"] == "BeforeTestRun")!;
+        Assert.That(ServicesLogging(beforeTestRun, Started), Is.EquivalentTo(new[] { "back-api", "front-api" }), "both services start in the BeforeTestRun window");
+        Assert.That(Nanos(unattributed["startUnixNano"]), Is.LessThanOrEqualTo(Nanos(beforeTestRun["startUnixNano"])), "the run scale starts before its first hook");
+    }
+
+    [Test]
+    public void Telemetry_the_SUT_exports_while_the_AfterTestRun_hook_stops_it_is_in_the_viewer()
+    {
+        var afterTestRun = Reports.DataBlock(_html, "run-index")["unattributed"]!["hooks"]!.AsArray()
+            .Single(h => (string?)h!["hookType"] == "AfterTestRun" && (string?)h["name"] == "SutHooks.StopSut")!;
+
+        Assert.That(ServicesLogging(afterTestRun, "Application is shutting down"), Is.EquivalentTo(new[] { "front-api", "back-api" }),
+            "both services' shutdown is in the AfterTestRun window: the files are written after the test project's AfterTestRun hooks");
+    }
+
+    [Test]
+    public void Every_scenario_records_the_BeforeScenario_hook_of_the_test_project_with_its_Front_request_and_no_hook_of_the_plugin()
+    {
+        var spans = Spans();
+        foreach (var scenario in Reports.Scenarios(_html))
+        {
+            var name = (string?)scenario["name"];
+            var hooks = scenario["hooks"]!.AsArray();
+            Assert.That(hooks.Select(h => ((string?)h!["hookType"], (string?)h["name"])),
+                Is.EqualTo(new[] { ("BeforeScenario", "SutHooks.EnsureFrontAnswers") }), $"{name}: only the test project's hook, none of the plugin");
+            var hook = hooks.Single()!;
+            Assert.That(hook["spanIds"]!.AsArray().Select(id => spans[(string)id!]), Has.Some.Matches<(JsonNode Span, string Service)>(s =>
+                s.Service == "front-api" && (int?)s.Span["kind"] == Server && Attribute(s.Span, "http.response.status_code") == "404"),
+                $"{name}: the readiness request is not in the hook window");
+            Assert.That(Nanos(hook["endUnixNano"]), Is.LessThan(Nanos(scenario["steps"]![0]!["startUnixNano"])), $"{name}: the hook window overlaps the first step");
+        }
     }
 }

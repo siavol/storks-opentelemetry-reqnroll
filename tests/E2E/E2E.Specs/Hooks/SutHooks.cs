@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
+using NUnit.Framework;
 using Reqnroll;
 using Storks.OpenTelemetry.Reqnroll;
 
@@ -24,6 +25,15 @@ public static class SutHooks
         _frontUrl = FreeLocalUrl();
         await Start("Back.Api", backUrl, telemetry, []);
         await Start("Front.Api", _frontUrl, telemetry, new() { ["BACK_API_URL"] = backUrl.ToString() });
+    }
+
+    /// <summary>Checks that Front answers; its request is the telemetry of a scenario hook in the viewer.</summary>
+    [BeforeScenario]
+    public static async Task EnsureFrontAnswers()
+    {
+        using var client = CreateFrontClient();
+        using var response = await client.GetAsync(new Uri("/", UriKind.Relative));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound), "front-api is not ready");
     }
 
     [AfterTestRun]
