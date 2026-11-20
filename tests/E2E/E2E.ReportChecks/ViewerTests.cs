@@ -41,9 +41,13 @@ public class ViewerTests
         return (resourceLogs["scopeLogs"]![index[2]]!["logRecords"]![index[3]]!, Reports.ServiceName(resourceLogs));
     }
 
-    private static string? Attribute(JsonNode span, string key)
+    /// <summary>Embedded logs of a window (a step or a hook), with their service.</summary>
+    private IEnumerable<(JsonNode Log, string Service)> LogsIn(JsonNode window) =>
+        window["logIds"]!.AsArray().Select(id => Log((string)id!));
+
+    private static string? StatusCode(JsonNode span)
     {
-        var value = span["attributes"]?.AsArray().FirstOrDefault(a => (string?)a!["key"] == key)?["value"];
+        var value = span["attributes"]?.AsArray().FirstOrDefault(a => (string?)a!["key"] == "http.response.status_code")?["value"];
         return value is null ? null : (value["intValue"] ?? value["stringValue"])?.ToString();
     }
 
@@ -79,8 +83,8 @@ public class ViewerTests
     {
         var step = WhenStep(Red);
 
-        var warnings = step["logIds"]!.AsArray().Select(id => Log((string)id!))
-            .Where(l => ((string?)l.Log["body"]?["stringValue"])?.Contains("Price request to back-api failed") == true).ToList();
+        var warnings = LogsIn(step)
+            .Where(l => Body(l.Log)?.Contains("Price request to back-api failed") == true).ToList();
         Assert.That(warnings, Has.Count.EqualTo(1), "the Front warning is not attributed to the When step");
         var (log, service) = warnings[0];
         Assert.That(service, Is.EqualTo("front-api"));
@@ -96,7 +100,7 @@ public class ViewerTests
     {
         var stepSpans = StepSpans(WhenStep(Red));
 
-        var back = stepSpans.Where(s => s.Service == "back-api" && Attribute(s.Span, "http.response.status_code") == "500").ToList();
+        var back = stepSpans.Where(s => s.Service == "back-api" && StatusCode(s.Span) == "500").ToList();
         Assert.That(back, Has.Count.EqualTo(1), "no Back span with status code 500 attributed to the When step");
         var parent = (string?)back[0].Span["parentSpanId"];
         Assert.That(stepSpans, Has.Some.Matches<EmbeddedSpan>(s => s.Service == "front-api" && (string?)s.Span["spanId"] == parent),
@@ -113,18 +117,14 @@ public class ViewerTests
         var trace = stepSpans.Where(s => (string?)s.Span["traceId"] == (string?)frontRequest.Span["traceId"]).ToList();
         Assert.That(trace, Has.Some.Matches<EmbeddedSpan>(s => s.Is("front-api", Client)), "no Front client call");
         Assert.That(trace, Has.Some.Matches<EmbeddedSpan>(s =>
-            s.Is("back-api", Server) && Attribute(s.Span, "http.response.status_code") == "200"), "no Back server span with 200");
-        Assert.That(step["logIds"]!.AsArray().Select(id => Log((string)id!).Service).Distinct(),
+            s.Is("back-api", Server) && StatusCode(s.Span) == "200"), "no Back server span with 200");
+        Assert.That(LogsIn(step).Select(l => l.Service).Distinct(),
             Is.SupersetOf(new[] { "front-api", "back-api" }), "logs of both services in the When step");
     }
 
     private static string? Body(JsonNode log) => (string?)log["body"]?["stringValue"];
 
     private static ulong Nanos(JsonNode? value) => ulong.Parse((string)value!, CultureInfo.InvariantCulture);
-
-    /// <summary>Services that logged a message containing the text in the window.</summary>
-    private IEnumerable<string> ServicesLogging(JsonNode window, string text) =>
-        window["logIds"]!.AsArray().Select(id => Log((string)id!)).Where(l => Body(l.Log)?.Contains(text) == true).Select(l => l.Service);
 
     [Test]
     public void Startup_telemetry_is_Unattributed_in_the_BeforeTestRun_window_and_not_attributed_to_any_scenario()
@@ -142,7 +142,7 @@ public class ViewerTests
         Assert.That(hooks.Select(h => ((string?)h!["hookType"], (string?)h["name"])),
             Is.EquivalentTo(new[] { ("BeforeTestRun", "SutHooks.StartSut"), ("AfterTestRun", "SutHooks.StopSut") }), "only the test project's run hooks, none of the plugin");
         var beforeTestRun = hooks.Single(h => (string?)h!["hookType"] == "BeforeTestRun")!;
-        Assert.That(ServicesLogging(beforeTestRun, Started), Is.EquivalentTo(new[] { "back-api", "front-api" }), "both services start in the BeforeTestRun window");
+        Assert.That(LogsIn(beforeTestRun).Where(l => Body(l.Log)?.Contains(Started) == true).Select(l => l.Service), Is.EquivalentTo(new[] { "back-api", "front-api" }), "both services start in the BeforeTestRun window");
         Assert.That(Nanos(unattributed["startUnixNano"]), Is.LessThanOrEqualTo(Nanos(beforeTestRun["startUnixNano"])), "the run scale starts before its first hook");
     }
 
@@ -152,7 +152,7 @@ public class ViewerTests
         var afterTestRun = Reports.DataBlock(_html, "run-index")["unattributed"]!["hooks"]!.AsArray()
             .Single(h => (string?)h!["hookType"] == "AfterTestRun" && (string?)h["name"] == "SutHooks.StopSut")!;
 
-        Assert.That(ServicesLogging(afterTestRun, "Application is shutting down"), Is.EquivalentTo(new[] { "front-api", "back-api" }),
+        Assert.That(LogsIn(afterTestRun).Where(l => Body(l.Log)?.Contains("Application is shutting down") == true).Select(l => l.Service), Is.EquivalentTo(new[] { "front-api", "back-api" }),
             "both services' shutdown is in the AfterTestRun window: the files are written after the test project's AfterTestRun hooks");
     }
 
@@ -168,7 +168,7 @@ public class ViewerTests
                 Is.EqualTo(new[] { ("BeforeScenario", "SutHooks.EnsureFrontAnswers") }), $"{name}: only the test project's hook, none of the plugin");
             var hook = hooks.Single()!;
             Assert.That(hook["spanIds"]!.AsArray().Select(id => spans[(string)id!]), Has.Some.Matches<EmbeddedSpan>(s =>
-                s.Is("front-api", Server) && Attribute(s.Span, "http.response.status_code") == "404"),
+                s.Is("front-api", Server) && StatusCode(s.Span) == "404"),
                 $"{name}: the readiness request is not in the hook window");
             Assert.That(Nanos(hook["endUnixNano"]), Is.LessThan(Nanos(scenario["steps"]![0]!["startUnixNano"])), $"{name}: the hook window overlaps the first step");
         }

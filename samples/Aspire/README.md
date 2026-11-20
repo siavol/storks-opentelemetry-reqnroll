@@ -1,6 +1,8 @@
 # Aspire sample
 
-1. **What it shows:** Reqnroll scenarios against an Aspire app with the plugin on; the `@demo-failure` scenario fails on purpose.
+Reqnroll scenarios against an Aspire app with the plugin on; the `@demo-failure` 
+
+1. **What it shows:** scenario fails on purpose.
 2. **Run:** `dotnet test samples/Aspire/App.Specs` from the repo root. Needs Docker (Postgres container).
 3. **Report:** `samples/Aspire/App.Specs/bin/Debug/net11.0/reports/telemetry.html`.
 4. **Projects:**
