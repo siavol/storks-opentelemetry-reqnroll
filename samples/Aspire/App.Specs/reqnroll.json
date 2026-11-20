@@ -2,6 +2,7 @@
   "$schema": "https://schemas.reqnroll.net/reqnroll-config-latest.json",
   "formatters": {
     "html": { "outputFilePath": "reports/reqnroll_report.html" },
-    "message": { "outputFilePath": "reports/reqnroll_report.ndjson" }
+    "message": { "outputFilePath": "reports/reqnroll_report.ndjson" },
+    "opentelemetry": { "outputFilePath": "reports/telemetry.html", "tracesFilePath": "reports/otlp/traces.jsonl" }
   }
 }

@@ -11,14 +11,14 @@ public class ViewerIndexReportTests
     private const string Red = "Customer places an order for a SKU whose price cannot be fetched";
     private const string Green = "Customer places an order for a regular SKU";
 
-    private static string Page()
+    internal static string Page()
     {
         var path = Path.Combine(CucumberMessages.ReportDirectory, "telemetry.html");
         Assert.That(File.Exists(path), $"Run samples/Aspire/App.Specs first. Not found: {path}");
         return File.ReadAllText(path);
     }
 
-    private static JsonNode DataBlock(string html, string id)
+    internal static JsonNode DataBlock(string html, string id)
     {
         var m = Regex.Match(html, $"<script type=\"application/json\" id=\"{id}\">(.*?)</script>", RegexOptions.Singleline);
         Assert.That(m.Success, $"telemetry.html has no data block {id}");
@@ -41,15 +41,12 @@ public class ViewerIndexReportTests
         return value is null ? null : (value["intValue"] ?? value["stringValue"])?.ToString();
     }
 
-    /// <summary>The index entry of the When step of the scenario, found through its link in the Reqnroll report.</summary>
+    /// <summary>The index entry of the When step of the scenario.</summary>
     private static JsonNode WhenStep(string html, string scenarioName)
     {
-        var link = CucumberMessages.Load().TelemetryLinks(scenarioName).Single(l => l.StepText?.StartsWith("the customer orders", StringComparison.Ordinal) == true).Link;
-        var hash = link.Split('#')[1].Split('&').Select(p => p.Split('=')).ToDictionary(p => p[0], p => p[1]);
-
         var scenario = DataBlock(html, "run-index")["features"]!.AsArray()
-            .SelectMany(f => f!["scenarios"]!.AsArray()).Single(s => (string?)s!["id"] == hash["s"])!;
-        var step = scenario["steps"]!.AsArray().Single(s => (int)s!["number"]! == int.Parse(hash["step"], CultureInfo.InvariantCulture))!;
+            .SelectMany(f => f!["scenarios"]!.AsArray()).Single(s => (string?)s!["name"] == scenarioName)!;
+        var step = scenario["steps"]!.AsArray().Single(s => ((string?)s!["text"])?.StartsWith("the customer orders", StringComparison.Ordinal) == true)!;
         Assert.That((string?)step["keyword"], Is.EqualTo("When"));
         return step;
     }
@@ -187,6 +184,17 @@ public class ViewerIndexReportTests
             Has.Some.Contains("Application started"), "the AppHost start is in the BeforeTestRun window");
         Assert.That(hooks.Select(h => ((string?)h!["hookType"], (string?)h["name"])), Does.Contain(("AfterTestRun", "AppHostHooks.StopAppHost")));
         Assert.That(ulong.Parse((string)un["startUnixNano"]!, CultureInfo.InvariantCulture), Is.LessThanOrEqualTo(ulong.Parse((string)beforeTestRun["startUnixNano"]!, CultureInfo.InvariantCulture)), "the run scale starts before its first hook");
+    }
+
+    [Test]
+    public void Telemetry_the_SUT_exports_while_the_AfterTestRun_hook_stops_it_is_in_the_viewer()
+    {
+        var html = Page();
+        var afterTestRun = DataBlock(html, "run-index")["unattributed"]!["hooks"]!.AsArray()
+            .Single(h => (string?)h!["hookType"] == "AfterTestRun" && (string?)h["name"] == "AppHostHooks.StopAppHost")!;
+
+        Assert.That(afterTestRun["logIds"]!.AsArray().Select(id => Body(Log(html, (string)id!).Log)),
+            Has.Some.Contains("Application is shutting down"), "the files are written after the test project's AfterTestRun hooks");
     }
 
     [Test]

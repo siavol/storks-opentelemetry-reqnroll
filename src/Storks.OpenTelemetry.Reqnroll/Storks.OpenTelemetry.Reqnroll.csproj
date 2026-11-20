@@ -12,7 +12,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>Storks.OpenTelemetry.Reqnroll</PackageId>
-    <Description>Reqnroll plugin that receives the SUT's OpenTelemetry traces and logs over OTLP during a test run and shows them by scenario and step in a Telemetry Viewer linked from the Reqnroll report.</Description>
+    <Description>Reqnroll formatter that receives the SUT's OpenTelemetry traces and logs over OTLP during a test run and shows them by scenario and step in a Telemetry Viewer.</Description>
     <Authors>Ilya Shestakov</Authors>
     <Copyright>Copyright (c) 2026 Ilya Shestakov</Copyright>
     <PackageTags>reqnroll;opentelemetry;otlp;bdd;gherkin;testing</PackageTags>

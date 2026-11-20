@@ -8,7 +8,7 @@ internal sealed record HookRun(string HookType, string Name, DateTimeOffset Star
 
 /// <summary>
 /// One run of a scenario. Outline examples and retries are separate runs, each with its own <see cref="Id"/>.
-/// A scenario runs on a single thread, so the run itself needs no locking.
+/// The run record is built by one thread from the Cucumber Messages, at the end of the run.
 /// </summary>
 internal sealed class ScenarioRun
 {
@@ -29,10 +29,10 @@ internal sealed class ScenarioRun
 
     public string Name { get; }
     public IReadOnlyList<string> Tags { get; }
-    /// <summary>Start of the Observation Window: when the plugin's BeforeScenario hook opened it (<see cref="OpenWindow"/>).</summary>
-    public DateTimeOffset Start { get; private set; }
+    /// <summary>Start of the Observation Window: <c>TestCaseStarted</c>.</summary>
+    public DateTimeOffset Start { get; }
 
-    /// <summary>End of the Observation Window: when the plugin's AfterScenario hook closed it, else when the scenario finished.</summary>
+    /// <summary>End of the Observation Window: <c>TestCaseFinished</c>.</summary>
     public DateTimeOffset End { get; private set; }
     public string Status { get; private set; } = RunStatus.Passed;
     public string? Error { get; private set; }
@@ -42,8 +42,8 @@ internal sealed class ScenarioRun
     public IReadOnlyList<HookRun> Hooks => _hooks;
 
     /// <summary>
-    /// Appends a step; steps are numbered from 1 in order of completion. Its window does not include its BeforeStep and
-    /// AfterStep hooks: Reqnroll 3.3.4 runs them before StepStarted and after StepFinished.
+    /// Appends a step; steps are numbered from 1 in the order of the test case. Its window does not include its BeforeStep and
+    /// AfterStep hooks: they are test steps of their own.
     /// </summary>
     public int AddStep(string keyword, string text, DateTimeOffset start, DateTimeOffset end, string status, string? error)
     {
@@ -54,34 +54,22 @@ internal sealed class ScenarioRun
 
     public void AddHook(HookRun hook) => _hooks.Add(hook);
 
-    private bool _closed;
-
-    public void OpenWindow(DateTimeOffset start) => Start = start;
-
-    /// <summary>Closes the window before the plugin's own AfterScenario hooks; the scenario finishes after them.</summary>
-    public void CloseWindow(DateTimeOffset end)
-    {
-        End = end;
-        _closed = true;
-    }
-
-    /// <summary>Ends the window here only if the plugin's AfterScenario hook did not run.</summary>
+    /// <summary>Ends the scenario window.</summary>
     public void Finish(DateTimeOffset end, string status, string? error)
     {
-        if (!_closed) End = end;
+        End = end;
         Status = status;
         Error = error;
     }
 }
 
 /// <summary>
-/// Thread-safe record of the test run (the source of the run index): every scenario run and the run and feature hook
+/// Record of the test run (the source of the run index): every scenario run and the run and feature hook
 /// calls (BeforeTestRun, BeforeFeature, AfterFeature, AfterTestRun) of the test project. <see cref="Start"/> is the start
-/// of the run's scale in the viewer: the record is created when the plugin starts, before any hook runs.
+/// of the run's scale in the viewer, before any hook runs.
 /// </summary>
 internal sealed class RunRecord(DateTimeOffset start)
 {
-    private readonly Lock _gate = new();
     private readonly List<ScenarioRun> _runs = [];
     private readonly List<HookRun> _runHooks = [];
 
@@ -91,24 +79,24 @@ internal sealed class RunRecord(DateTimeOffset start)
 
     public void AddRunHook(HookRun hook)
     {
-        lock (_gate) _runHooks.Add(hook);
+        _runHooks.Add(hook);
     }
 
     /// <summary>Run and feature hook calls, by start time.</summary>
     public IReadOnlyList<HookRun> RunHooks()
     {
-        lock (_gate) return _runHooks.OrderBy(h => h.Start).ToArray();
+        return _runHooks.OrderBy(h => h.Start).ToArray();
     }
 
     public ScenarioRun Begin(string feature, string name, IReadOnlyList<string> tags, DateTimeOffset start)
     {
         var run = new ScenarioRun(feature, name, tags, start);
-        lock (_gate) _runs.Add(run);
+        _runs.Add(run);
         return run;
     }
 
     public IReadOnlyList<ScenarioRun> Snapshot()
     {
-        lock (_gate) return _runs.ToArray();
+        return _runs.ToArray();
     }
 }

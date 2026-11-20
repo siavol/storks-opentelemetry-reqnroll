@@ -98,11 +98,4 @@ public class RunIndexTests
         Assert.That(ids, Is.EqualTo(new[] { a.Id, b.Id }));
         Assert.That((string)json["features"]![0]!["scenarios"]![1]!["steps"]![0]!["error"]!, Is.EqualTo("boom"));
     }
-
-    [Test]
-    public void Links_point_to_the_viewer_with_scenario_and_optional_step_in_hash()
-    {
-        Assert.That(TelemetryLinks.Scenario("abc"), Is.EqualTo("telemetry.html#s=abc"));
-        Assert.That(TelemetryLinks.Step("abc", 3), Is.EqualTo("telemetry.html#s=abc&step=3"));
-    }
 }
