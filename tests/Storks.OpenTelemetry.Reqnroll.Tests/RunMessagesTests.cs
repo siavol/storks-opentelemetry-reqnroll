@@ -221,7 +221,7 @@ public class RunMessagesTests
     }
 
     [Test]
-    public void Failed_step_carries_the_exception_message()
+    public void Failed_step_carries_the_exception_message_and_stack_trace()
     {
         var exception = new { type = "AssertionException", message = "Expected: 50m", stackTrace = "   at CheckoutSteps.Then()" };
         var (record, _) = Read([.. Definitions(), .. Attempt("s1", 1000, "FAILED", exception)]);
@@ -229,7 +229,7 @@ public class RunMessagesTests
         var scenario = RunIndex.Build(record).Features.Single().Scenarios.Single();
         Assert.That(scenario.Status, Is.EqualTo("failed"));
         Assert.That(scenario.Steps[2].Status, Is.EqualTo("failed"));
-        Assert.That(scenario.Steps[2].Error, Is.EqualTo("Expected: 50m"));
+        Assert.That(scenario.Steps[2].Error, Is.EqualTo("Expected: 50m\n\n   at CheckoutSteps.Then()"));
         Assert.That(scenario.Error, Is.EqualTo(scenario.Steps[2].Error));
     }
 

@@ -152,13 +152,13 @@ internal sealed class RunMessages
     private static DateTimeOffset Time(Timestamp t) =>
         DateTimeOffset.UnixEpoch.AddSeconds(t.Seconds).AddTicks(t.Nanos / 100);
 
-    /// <summary>The exception message; the exception type and stack trace if there is no message (Reqnroll 3.0.x).</summary>
+    /// <summary>The exception message and stack trace; the exception type stands in for a message Reqnroll 3.0.x leaves empty.</summary>
     private static string? ErrorText(TestStepResult result)
     {
         var exception = result.Exception;
-        if (!string.IsNullOrEmpty(exception?.Message)) return exception.Message;
-        var fallback = string.Join("\n\n", new[] { exception?.Type, exception?.StackTrace }.Where(s => !string.IsNullOrEmpty(s)));
-        return fallback.Length > 0 ? fallback : NullIfEmpty(result.Message);
+        var headline = string.IsNullOrEmpty(exception?.Message) ? exception?.Type : exception.Message;
+        var text = string.Join("\n\n", new[] { headline, exception?.StackTrace }.Where(s => !string.IsNullOrEmpty(s)));
+        return text.Length > 0 ? text : NullIfEmpty(result.Message);
     }
 
     private static string? NullIfEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;

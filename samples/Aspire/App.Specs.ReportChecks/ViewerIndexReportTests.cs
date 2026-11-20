@@ -115,14 +115,14 @@ public class ViewerIndexReportTests
     }
 
     [Test]
-    public void Failed_step_of_red_scenario_carries_the_exception_message()
+    public void Failed_step_of_red_scenario_carries_the_full_error_with_stack_trace()
     {
         var html = Page();
         var feature = DataBlock(html, "run-index")["features"]!.AsArray()
             .Single(f => f!["scenarios"]!.AsArray().Any(s => (string?)s!["name"] == Red))!;
         var failed = feature["scenarios"]!.AsArray().Single(s => (string?)s!["name"] == Red)!["steps"]!.AsArray()
             .Single(s => (string?)s!["status"] == "failed")!;
-        Assert.That((string?)failed["error"], Does.Contain("Expected").And.Not.Contain(" at App.Specs.Steps.CheckoutSteps"));
+        Assert.That((string?)failed["error"], Does.Contain("Expected").And.Contain(" at App.Specs.Steps.CheckoutSteps"));
     }
 
     [Test]
