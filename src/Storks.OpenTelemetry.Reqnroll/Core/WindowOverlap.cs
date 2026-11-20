@@ -1,17 +1,16 @@
 namespace Storks.OpenTelemetry.Reqnroll.Core;
 
 /// <summary>
-/// Warns about Window Overlap, since telemetry in the overlap shows up in each overlapping scenario. Thread-safe:
+/// Counts Window Overlap for the end-of-run summary, since telemetry in the overlap shows up in each overlapping scenario. Thread-safe:
 /// parallel scenarios open and close their windows on their own threads.
 /// </summary>
 internal interface IWindowOverlap
 {
-    /// <summary>The warning to show, or null.</summary>
-    string? Opened(ScenarioRun run);
+    void Opened(ScenarioRun run);
 
     void Closed(ScenarioRun run);
 
-    /// <summary>One end-of-run line instead of a warning per scenario, or null.</summary>
+    /// <summary>The one end-of-run line with the number of overlaps, or null.</summary>
     string? Summary();
 }
 
@@ -19,7 +18,7 @@ internal interface IWindowOverlap
 internal sealed class WindowOverlap : IWindowOverlap
 {
     /// <summary>
-    /// README section that explains the limitation. An absolute URL, because the warning is read in the test output of a
+    /// README section that explains the limitation. An absolute URL, because the summary is read in the test output of a
     /// package user, where a relative README path leads nowhere.
     /// </summary>
     internal const string ReadmeSection = "https://github.com/siavol/storks-opentelemetry-reqnroll/blob/main/README.md#window-overlap";
@@ -28,19 +27,13 @@ internal sealed class WindowOverlap : IWindowOverlap
     private readonly List<ScenarioRun> _open = [];
     private int _count;
 
-    public string? Opened(ScenarioRun run)
+    public void Opened(ScenarioRun run)
     {
-        ScenarioRun[] others;
         lock (_gate)
         {
-            others = _open.Where(r => r != run).ToArray();
+            if (_open.Any(r => r != run)) _count++;
             if (!_open.Contains(run)) _open.Add(run);
-            if (others.Length > 0) _count++;
         }
-        if (others.Length == 0) return null;
-        return $"Window Overlap: scenario {Title(run)} started while {string.Join(", ", others.Select(Title))} "
-            + $"{(others.Length == 1 ? "was" : "were")} still running, so telemetry in the overlap shows up in each of the overlapping scenarios. "
-            + $"See {ReadmeSection}";
     }
 
     public void Closed(ScenarioRun run)
@@ -56,6 +49,4 @@ internal sealed class WindowOverlap : IWindowOverlap
         return $"Window Overlap: {count} scenario {(count == 1 ? "window" : "windows")} opened while another was open; "
             + $"telemetry in an overlap shows up in each of the overlapping scenarios. See {ReadmeSection}";
     }
-
-    private static string Title(ScenarioRun run) => $"'{run.Feature}: {run.Name}'";
 }

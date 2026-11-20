@@ -30,7 +30,7 @@ public class RunTrackerTests
     }
 
     [Test]
-    public void Window_opened_while_another_is_open_warns_with_both_scenarios_and_the_readme_section()
+    public void Window_opened_while_another_is_open_is_only_counted_in_the_summary_with_the_readme_section()
     {
         var diagnostics = new PluginDiagnostics();
         var record = new RunRecord();
@@ -39,12 +39,7 @@ public class RunTrackerTests
         tracker.WindowOpened(record.Begin("Checkout", "Pay by card", [], T0));
         tracker.WindowOpened(record.Begin("Pricing", "Apply discount", [], T0.AddMilliseconds(10)));
 
-        var warning = diagnostics.Drain().Single();
-        Assert.That(warning, Does.Contain("Window Overlap")
-            .And.Contain("'Pricing: Apply discount'")
-            .And.Contain("'Checkout: Pay by card'")
-            .And.Contain("shows up in each of the overlapping scenarios")
-            .And.Contain(WindowOverlapSection));
+        Assert.That(diagnostics.Drain(), Is.Empty, "no warning per scenario");
         Assert.That(tracker.WindowOverlapSummary(), Does.Contain("Window Overlap: 1 scenario window").And.Contain(WindowOverlapSection));
     }
 
@@ -59,6 +54,6 @@ public class RunTrackerTests
         Assert.DoesNotThrow(() => tracker.WindowOpened(run));
         Assert.DoesNotThrow(() => tracker.WindowClosed(run));
         Assert.That(tracker.WindowOverlapSummary(), Is.Null);
-        Assert.That(diagnostics.Drain(), Has.Count.EqualTo(3).And.All.Contain("overlap check is broken"));
+        Assert.That(diagnostics.Drain(), Has.Count.EqualTo(2).And.All.Contain("overlap check is broken"), "opening and closing are one kind");
     }
 }

@@ -64,7 +64,7 @@ internal sealed class RunMessages
         foreach (var started in _started.OrderBy(s => Time(s.Timestamp)))
         {
             try { runs.Add(Run(record, started)); }
-            catch (System.Exception ex) { diagnostics.Report($"failed to read test case run {started.Id} from Cucumber Messages: {ex.Message}"); }
+            catch (System.Exception ex) { diagnostics.Report("failed to read a test case run from Cucumber Messages", $"{started.Id}: {ex.Message}"); }
         }
 
         // At the same instant a window closes before another opens: they only touch.

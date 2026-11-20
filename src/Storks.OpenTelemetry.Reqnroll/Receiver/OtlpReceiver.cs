@@ -19,18 +19,18 @@ namespace Storks.OpenTelemetry.Reqnroll.Receiver;
 internal sealed class OtlpReceiver : IAsyncDisposable
 {
     private readonly TelemetryStore _store;
-    private readonly Action<string>? _onError;
+    private readonly Action<string, string>? _onError;
     private WebApplication? _app;
 
-    public OtlpReceiver(TelemetryStore store, Action<string>? onError = null)
+    public OtlpReceiver(TelemetryStore store, Action<string, string>? onError = null)
     {
         _store = store;
         _onError = onError;
     }
 
-    private void Report(string message)
+    private void Report(string kind, string detail)
     {
-        try { _onError?.Invoke(message); }
+        try { _onError?.Invoke(kind, detail); }
         catch { /* the error sink must never break the receiver */ }
     }
 
@@ -51,12 +51,12 @@ internal sealed class OtlpReceiver : IAsyncDisposable
         }
         catch (InvalidProtocolBufferException ex)
         {
-            Report($"rejected invalid OTLP request to {path}: {ex.Message}");
+            Report("rejected invalid OTLP request", $"{path}: {ex.Message}");
             http.StatusCode = StatusCodes.Status400BadRequest;
         }
         catch (Exception ex)
         {
-            Report($"failed to process OTLP request to {path}: {ex}");
+            Report("failed to process OTLP request", $"{path}: {ex}");
             if (!http.HasStarted) http.StatusCode = StatusCodes.Status500InternalServerError;
         }
     }

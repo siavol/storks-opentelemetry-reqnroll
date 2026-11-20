@@ -24,7 +24,7 @@ public class ReceiverFaultToleranceTests
     public async Task Invalid_request_is_reported_to_the_error_sink()
     {
         var errors = new List<string>();
-        await using var receiver = new OtlpReceiver(new TelemetryStore(), errors.Add);
+        await using var receiver = new OtlpReceiver(new TelemetryStore(), (kind, detail) => errors.Add($"{kind}: {detail}"));
         await receiver.StartAsync();
         using var http = new HttpClient();
 
@@ -68,7 +68,7 @@ public class ReceiverFaultToleranceTests
     public async Task Malformed_protobuf_gets_400_is_reported_and_the_receiver_keeps_running(string path)
     {
         var errors = new List<string>();
-        await using var receiver = new OtlpReceiver(new TelemetryStore(), errors.Add);
+        await using var receiver = new OtlpReceiver(new TelemetryStore(), (kind, detail) => errors.Add($"{kind}: {detail}"));
         await receiver.StartAsync();
         using var http = new HttpClient();
 

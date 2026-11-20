@@ -18,20 +18,17 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
         catch (Exception ex) { diagnostics.Report($"failed to record hook '{hook.Name}': {ex.Message}"); }
     }
 
-    /// <summary>The scenario's Observation Window opened; warns about Window Overlap (Attribution is unchanged).</summary>
+    /// <summary>The scenario's Observation Window opened; counts Window Overlap for the summary (Attribution is unchanged).</summary>
     public void WindowOpened(ScenarioRun run)
     {
-        try
-        {
-            if (_overlap.Opened(run) is { } warning) diagnostics.Report(warning);
-        }
-        catch (Exception ex) { diagnostics.Report($"failed to check Window Overlap of scenario '{run.Name}': {ex.Message}"); }
+        try { _overlap.Opened(run); }
+        catch (Exception ex) { diagnostics.Report("failed to check Window Overlap", $"scenario '{run.Name}': {ex.Message}"); }
     }
 
     public void WindowClosed(ScenarioRun run)
     {
         try { _overlap.Closed(run); }
-        catch (Exception ex) { diagnostics.Report($"failed to check Window Overlap of scenario '{run.Name}': {ex.Message}"); }
+        catch (Exception ex) { diagnostics.Report("failed to check Window Overlap", $"scenario '{run.Name}': {ex.Message}"); }
     }
 
     public string? WindowOverlapSummary()
@@ -39,7 +36,7 @@ internal sealed class RunTracker(RunRecord record, PluginDiagnostics diagnostics
         try { return _overlap.Summary(); }
         catch (Exception ex)
         {
-            diagnostics.Report($"failed to summarize Window Overlap: {ex.Message}");
+            diagnostics.Report("failed to summarize Window Overlap", ex.Message);
             return null;
         }
     }

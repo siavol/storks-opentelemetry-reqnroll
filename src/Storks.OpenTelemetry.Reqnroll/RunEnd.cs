@@ -33,7 +33,8 @@ internal static class RunEnd
         try
         {
             ViewerPage.Write(files.Viewer, record, store);
-            output.Info($"telemetry viewer written to {files.Viewer}");
+            // The only line of a normal run: the jsonl paths are in the configuration.
+            output.Info($"telemetry written to {files.Viewer}");
         }
         catch (Exception ex)
         {
@@ -43,7 +44,6 @@ internal static class RunEnd
         try
         {
             OtlpJsonFiles.Write(files.Traces, files.Logs, store);
-            output.Info($"OTLP/JSON telemetry written to {files.Traces} and {files.Logs}");
         }
         catch (Exception ex)
         {
