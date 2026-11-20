@@ -54,7 +54,7 @@ internal sealed class ScenarioRun
 
     public void AddHook(HookRun hook) => _hooks.Add(hook);
 
-    /// <summary>Ends the window at <c>TestCaseFinished</c>.</summary>
+    /// <summary>Ends the scenario window.</summary>
     public void Finish(DateTimeOffset end, string status, string? error)
     {
         End = end;

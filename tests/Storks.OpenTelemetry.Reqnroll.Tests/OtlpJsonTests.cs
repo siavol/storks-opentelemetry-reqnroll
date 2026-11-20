@@ -190,5 +190,7 @@ public class OtlpJsonTests
             new RunOutput(TextWriter.Null, errors)));
         Assert.That(errors.ToString(), Does.Contain("[Storks.OpenTelemetry] failed to write the telemetry viewer")
             .And.Contain("[Storks.OpenTelemetry] failed to write OTLP/JSON telemetry"));
+        Assert.That(errors.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries), Has.Length.EqualTo(2),
+            "one line per problem, without a stack trace");
     }
 }

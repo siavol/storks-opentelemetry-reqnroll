@@ -18,7 +18,7 @@ internal sealed class TelemetryFormatter(IFormattersConfigurationProvider config
     public const string FormatterName = "opentelemetry";
 
     /// <summary>Whether the plugin is on: formatters are enabled and the configuration has an <c>opentelemetry</c> entry.</summary>
-    public static bool IsSwitchedOn(IFormattersConfigurationProvider configuration) =>
+    public static bool IsEnabled(IFormattersConfigurationProvider configuration) =>
         configuration.Enabled && configuration.GetFormatterConfigurationByName(FormatterName) is not null;
 
     // The paths are read from the same configuration by StorksPlugin, which registers them as ReportFiles.

@@ -3,11 +3,7 @@ namespace Storks.OpenTelemetry.Reqnroll.Core;
 /// <summary>The full paths of the files the Telemetry Formatter writes at the end of the run.</summary>
 internal sealed record ReportFiles(string Viewer, string Traces, string Logs)
 {
-    /// <summary>
-    /// From the formatter's configuration: <c>outputFilePath</c> (default <c>reports/telemetry.html</c>), <c>tracesFilePath</c> and
-    /// <c>logsFilePath</c> (default next to the viewer). Relative paths are taken from the working directory, as the built-in
-    /// formatters do; <paramref name="resolvePlaceholders"/> is applied to each configured path.
-    /// </summary>
+    /// <summary>From the formatter's configuration; relative paths are taken from the working directory, as the built-in formatters do.</summary>
     public static ReportFiles From(IDictionary<string, object> configuration, Func<string, string> resolvePlaceholders)
     {
         string? Configured(string key) =>

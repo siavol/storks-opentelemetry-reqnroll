@@ -56,7 +56,7 @@ internal sealed class OtlpReceiver : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Report("failed to process OTLP request", $"{path}: {ex}");
+            Report("failed to process OTLP request", $"{path}: {ex.GetType().Name}: {ex.Message}");
             if (!http.HasStarted) http.StatusCode = StatusCodes.Status500InternalServerError;
         }
     }

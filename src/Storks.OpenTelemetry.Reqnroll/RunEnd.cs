@@ -18,7 +18,7 @@ internal static class RunEnd
         }
         catch (Exception ex)
         {
-            output.Error($"failed to stop the receiver: {ex}");
+            output.Error($"failed to stop the receiver: {ex.GetType().Name}: {ex.Message}");
         }
 
         try
@@ -27,7 +27,7 @@ internal static class RunEnd
         }
         catch (Exception ex)
         {
-            output.Error($"failed to read the scenarios from Cucumber Messages: {ex}");
+            output.Error($"failed to read the scenarios from Cucumber Messages: {ex.GetType().Name}: {ex.Message}");
         }
 
         try
@@ -38,7 +38,7 @@ internal static class RunEnd
         }
         catch (Exception ex)
         {
-            output.Error($"failed to write the telemetry viewer: {ex}");
+            output.Error($"failed to write the telemetry viewer: {ex.GetType().Name}: {ex.Message}");
         }
 
         try
@@ -47,7 +47,7 @@ internal static class RunEnd
         }
         catch (Exception ex)
         {
-            output.Error($"failed to write OTLP/JSON telemetry: {ex}");
+            output.Error($"failed to write OTLP/JSON telemetry: {ex.GetType().Name}: {ex.Message}");
         }
 
         // Before the drain, so that a failure to summarize is drained too.

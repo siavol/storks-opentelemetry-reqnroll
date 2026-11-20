@@ -8,7 +8,7 @@ namespace Storks.OpenTelemetry.Reqnroll.Core;
 /// </summary>
 internal sealed class PluginDiagnostics
 {
-    /// <summary>Starts every line the plugin writes to the test output.</summary>
+    /// <summary>Starts every line the plugin writes.</summary>
     public const string Prefix = "[Storks.OpenTelemetry] ";
 
     private readonly ConcurrentQueue<(string Kind, string? Detail)> _problems = new();

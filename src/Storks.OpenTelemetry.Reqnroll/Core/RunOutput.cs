@@ -8,7 +8,7 @@ internal sealed class RunOutput(TextWriter info, TextWriter error)
 {
     /// <summary>
     /// The test process's own standard output and error streams. Not <see cref="Console.Out"/>: test frameworks redirect it
-    /// per test, and what an AfterTestRun hook writes there belongs to no test, so NUnit drops it. The process streams
+    /// per test, and what is written there after the tests belongs to no test, so NUnit drops it. The process streams
     /// reach the console of <c>dotnet test</c> at detailed verbosity (<c>--logger "console;verbosity=detailed"</c>).
     /// </summary>
     public static RunOutput ProcessStreams() => new(Open(Console.OpenStandardOutput()), Open(Console.OpenStandardError()));

@@ -31,7 +31,7 @@ internal sealed class StorksPlugin : IRuntimePlugin
     {
         container.RegisterTypeAs<TelemetryFormatter, ICucumberMessageFormatter>(TelemetryFormatter.FormatterName);
         var formatters = container.Resolve<IFormattersConfigurationProvider>();
-        if (!TelemetryFormatter.IsSwitchedOn(formatters))
+        if (!TelemetryFormatter.IsEnabled(formatters))
         {
             container.RegisterInstanceAs<ITelemetryEndpoint>(new TelemetryEndpoint(null));
             return;

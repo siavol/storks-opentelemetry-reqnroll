@@ -59,24 +59,23 @@ internal sealed class RunMessages
     }
 
     /// <summary>
-    /// Adds a scenario run per <c>TestCaseStarted</c> (so every retry attempt is a run of its own) and passes the
-    /// scenario windows to the Window Overlap check in time order; adds the run and feature hook calls. A test case run
-    /// or hook call that cannot be read is reported and skipped.
+    /// Adds a scenario run per test case attempt and the run and feature hook calls, and passes the scenario windows to
+    /// the Window Overlap check. What cannot be read is reported and skipped.
     /// </summary>
     public void Record(RunRecord record, RunTracker tracker, PluginDiagnostics diagnostics)
     {
-        try { RecordRunHooks(record); }
-        catch (System.Exception ex) { diagnostics.Report("failed to read run and feature hooks from Cucumber Messages", ex.Message); }
+        RecordRunHooks(record, diagnostics);
 
         var runs = new List<ScenarioRun>();
-        foreach (var started in _started.OrderBy(s => Time(s.Timestamp)))
+        foreach (var started in _started.OrderBy(s => Order(s.Timestamp)))
         {
             try { runs.Add(Run(record, started)); }
             catch (System.Exception ex) { diagnostics.Report("failed to read a test case run from Cucumber Messages", $"{started.Id}: {ex.Message}"); }
         }
 
         // At the same instant a window closes before another opens: they only touch.
-        foreach (var (_, opens, run) in runs.SelectMany(r => new[] { (r.Start, true, r), (r.End, false, r) }).OrderBy(e => e.Item1).ThenBy(e => e.Item2))
+        var edges = runs.SelectMany(r => new[] { (At: r.Start, Opens: true, Run: r), (At: r.End, Opens: false, Run: r) });
+        foreach (var (_, opens, run) in edges.OrderBy(e => e.At).ThenBy(e => e.Opens))
         {
             if (opens) tracker.WindowOpened(run);
             else tracker.WindowClosed(run);
@@ -84,22 +83,28 @@ internal sealed class RunMessages
     }
 
     /// <summary>
-    /// Pairs each hook finish with the earliest still open start of the same hook, else with the start it names: Reqnroll's
-    /// finish of a repeated [BeforeFeature]/[AfterFeature] names the first call's start. Exact when hooks run one after another;
-    /// in a parallel run calls of the same hook may be mixed up. A start without a finish is left out.
+    /// Pairs a hook finish with the earliest open start of the same hook: Reqnroll's finish of a repeated
+    /// [BeforeFeature]/[AfterFeature] names the first call's start. Calls of the same hook may be mixed up in a parallel run.
     /// </summary>
-    private void RecordRunHooks(RunRecord record)
+    private void RecordRunHooks(RunRecord record, PluginDiagnostics diagnostics)
     {
-        var starts = _runHookStarted.ToDictionary(s => s.Id);
-        var open = _runHookStarted.OrderBy(s => Time(s.Timestamp)).ToList();
-        foreach (var finished in _runHookFinished.OrderBy(f => Time(f.Timestamp)))
+        var starts = _runHookStarted.DistinctBy(s => s.Id).ToDictionary(s => s.Id);
+        var open = _runHookStarted.OrderBy(s => Order(s.Timestamp)).ToList();
+        foreach (var finished in _runHookFinished.OrderBy(f => Order(f.Timestamp)))
         {
-            if (!starts.TryGetValue(finished.TestRunHookStartedId, out var named)) continue;
-            var started = open.FirstOrDefault(s => s.HookId == named.HookId) ?? named;
-            open.Remove(started);
-            if (!_hooks.TryGetValue(started.HookId, out var hook)) continue;
-            record.AddRunHook(new HookRun(HookType(hook.Type), HookName(hook), Time(started.Timestamp), Time(finished.Timestamp),
-                Status(finished.Result.Status)));
+            try
+            {
+                if (!starts.TryGetValue(finished.TestRunHookStartedId, out var named)) continue;
+                var started = open.FirstOrDefault(s => s.HookId == named.HookId) ?? named;
+                open.Remove(started);
+                if (!_hooks.TryGetValue(started.HookId, out var hook)) continue;
+                record.AddRunHook(new HookRun(HookTypeName(hook.Type), HookName(hook), Time(started.Timestamp), Time(finished.Timestamp),
+                    Status(finished.Result.Status)));
+            }
+            catch (System.Exception ex)
+            {
+                diagnostics.Report("failed to read a run or feature hook call from Cucumber Messages", $"{finished.TestRunHookStartedId}: {ex.Message}");
+            }
         }
     }
 
@@ -130,7 +135,7 @@ internal sealed class RunMessages
             }
             else if (testStep.HookId is { } hookId && _hooks.TryGetValue(hookId, out var hook))
             {
-                run.AddHook(new HookRun(HookType(hook.Type), HookName(hook), start, end, status));
+                run.AddHook(new HookRun(HookTypeName(hook.Type), HookName(hook), start, end, status));
             }
         }
 
@@ -141,18 +146,22 @@ internal sealed class RunMessages
         return run;
     }
 
+    // Sorting must not throw on a timestamp out of DateTimeOffset's range: that message alone is reported.
+    private static (long, long) Order(Timestamp t) => (t.Seconds, t.Nanos);
+
     private static DateTimeOffset Time(Timestamp t) =>
         DateTimeOffset.UnixEpoch.AddSeconds(t.Seconds).AddTicks(t.Nanos / 100);
 
-    /// <summary>As the Reqnroll report shows it: the message, then the stack trace; the exception type if there is no message (Reqnroll 3.0.x).</summary>
+    /// <summary>The exception message; the exception type and stack trace if there is no message (Reqnroll 3.0.x).</summary>
     private static string? ErrorText(TestStepResult result)
     {
         var exception = result.Exception;
-        var message = new[] { exception?.Message, result.Message, exception?.Type }.FirstOrDefault(m => !string.IsNullOrEmpty(m));
-        var stackTrace = exception?.StackTrace;
-        if (message is null) return string.IsNullOrEmpty(stackTrace) ? null : stackTrace;
-        return string.IsNullOrEmpty(stackTrace) ? message : message + "\n\n" + stackTrace;
+        if (!string.IsNullOrEmpty(exception?.Message)) return exception.Message;
+        var fallback = string.Join("\n\n", new[] { exception?.Type, exception?.StackTrace }.Where(s => !string.IsNullOrEmpty(s)));
+        return fallback.Length > 0 ? fallback : NullIfEmpty(result.Message);
     }
+
+    private static string? NullIfEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
 
     private static string Status(TestStepResultStatus status) => status switch
     {
@@ -164,14 +173,14 @@ internal sealed class RunMessages
     };
 
     /// <summary>Reqnroll's hook names; run and feature hooks are both BEFORE_TEST_RUN/AFTER_TEST_RUN in the messages.</summary>
-    private static string HookType(Io.Cucumber.Messages.Types.HookType? type) => type switch
+    private static string HookTypeName(HookType? type) => type switch
     {
-        Io.Cucumber.Messages.Types.HookType.BEFORE_TEST_CASE => "BeforeScenario",
-        Io.Cucumber.Messages.Types.HookType.AFTER_TEST_CASE => "AfterScenario",
-        Io.Cucumber.Messages.Types.HookType.BEFORE_TEST_STEP => "BeforeStep",
-        Io.Cucumber.Messages.Types.HookType.AFTER_TEST_STEP => "AfterStep",
-        Io.Cucumber.Messages.Types.HookType.BEFORE_TEST_RUN => "BeforeTestRun",
-        Io.Cucumber.Messages.Types.HookType.AFTER_TEST_RUN => "AfterTestRun",
+        HookType.BEFORE_TEST_CASE => "BeforeScenario",
+        HookType.AFTER_TEST_CASE => "AfterScenario",
+        HookType.BEFORE_TEST_STEP => "BeforeStep",
+        HookType.AFTER_TEST_STEP => "AfterStep",
+        HookType.BEFORE_TEST_RUN => "BeforeTestRun",
+        HookType.AFTER_TEST_RUN => "AfterTestRun",
         _ => type?.ToString() ?? "",
     };
 

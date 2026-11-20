@@ -155,14 +155,20 @@ public class RunMessagesTests
 
     private static (RunRecord Record, RunTracker Tracker) Read(IEnumerable<Envelope> envelopes)
     {
+        var (record, tracker, problems) = ReadWithProblems(envelopes);
+        Assert.That(problems, Has.None.Contain("failed"), "every test case run is read");
+        return (record, tracker);
+    }
+
+    private static (RunRecord Record, RunTracker Tracker, IReadOnlyList<string> Problems) ReadWithProblems(IEnumerable<Envelope> envelopes)
+    {
         var record = new RunRecord(T0);
         var diagnostics = new PluginDiagnostics();
         var tracker = new RunTracker(diagnostics);
         var messages = new RunMessages();
         foreach (var envelope in envelopes) messages.Add(envelope);
         messages.Record(record, tracker, diagnostics);
-        Assert.That(diagnostics.Drain(), Has.None.Contain("failed"), "every test case run is read");
-        return (record, tracker);
+        return (record, tracker, diagnostics.Drain());
     }
 
     private static string UnixNano(double ms) =>
@@ -215,7 +221,7 @@ public class RunMessagesTests
     }
 
     [Test]
-    public void Failed_step_carries_the_exception_message_and_stack_trace()
+    public void Failed_step_carries_the_exception_message()
     {
         var exception = new { type = "AssertionException", message = "Expected: 50m", stackTrace = "   at CheckoutSteps.Then()" };
         var (record, _) = Read([.. Definitions(), .. Attempt("s1", 1000, "FAILED", exception)]);
@@ -223,7 +229,7 @@ public class RunMessagesTests
         var scenario = RunIndex.Build(record).Features.Single().Scenarios.Single();
         Assert.That(scenario.Status, Is.EqualTo("failed"));
         Assert.That(scenario.Steps[2].Status, Is.EqualTo("failed"));
-        Assert.That(scenario.Steps[2].Error, Is.EqualTo("Expected: 50m\n\n   at CheckoutSteps.Then()"));
+        Assert.That(scenario.Steps[2].Error, Is.EqualTo("Expected: 50m"));
         Assert.That(scenario.Error, Is.EqualTo(scenario.Steps[2].Error));
     }
 
@@ -303,6 +309,30 @@ public class RunMessagesTests
             ("FeatureHooks.Seed", UnixNano(100), UnixNano(200)),
             ("FeatureHooks.Seed", UnixNano(300), UnixNano(450)),
         }));
+    }
+
+    [Test]
+    public void Run_hook_call_that_cannot_be_read_is_reported_and_the_other_run_hooks_are_kept()
+    {
+        var (record, _, problems) = ReadWithProblems(
+        [
+            Hook("h-start", "BEFORE_TEST_RUN", "App.Specs.App.Specs.Hooks.AppHostHooks", "StartAppHost"),
+            Hook("h-stop", "AFTER_TEST_RUN", "App.Specs.App.Specs.Hooks.AppHostHooks", "StopAppHost"),
+            RunHookStarted("r1", "h-start", 0), RunHookStarted("r1", "h-start", 10),
+            E(new
+            {
+                testRunHookFinished = new
+                {
+                    testRunHookStartedId = "r1",
+                    result = new { status = "PASSED", duration = new { seconds = 0, nanos = 0 } },
+                    timestamp = new { seconds = long.MaxValue / 2, nanos = 0 },
+                },
+            }),
+            RunHookStarted("r2", "h-stop", 900), RunHookFinished("r2", 1000),
+        ]);
+
+        Assert.That(RunIndex.Build(record).Unattributed.Hooks.Select(h => h.Name), Is.EqualTo(new[] { "AppHostHooks.StopAppHost" }));
+        Assert.That(problems, Has.One.StartsWith("failed to read a run or feature hook call from Cucumber Messages"));
     }
 
     [Test]
