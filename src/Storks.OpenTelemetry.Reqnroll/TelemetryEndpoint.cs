@@ -3,10 +3,18 @@ namespace Storks.OpenTelemetry.Reqnroll;
 /// <summary>
 /// The plugin's in-process OTLP receiver, as seen by a test project. The plugin registers it in Reqnroll's global
 /// container: resolve it in a [BeforeTestRun] hook and hand <see cref="GetExporterEnvironment"/> to the SUT.
+/// It is registered whether the plugin is on or off, so the hook works either way.
 /// </summary>
 public interface ITelemetryEndpoint
 {
+    /// <summary>
+    /// Whether the plugin is on: Reqnroll's <c>formatters</c> configuration has an <c>opentelemetry</c> entry and
+    /// formatters are not disabled. Off, no receiver runs and <see cref="GetExporterEnvironment"/> is empty.
+    /// </summary>
+    bool IsEnabled { get; }
+
     /// <summary>Base address of the in-process OTLP/HTTP receiver, e.g. http://127.0.0.1:41234/.</summary>
+    /// <exception cref="InvalidOperationException">The plugin is off (<see cref="IsEnabled"/> is false): there is no receiver.</exception>
     Uri Endpoint { get; }
 
     /// <summary>
@@ -15,20 +23,24 @@ public interface ITelemetryEndpoint
     /// telemetry exported just before the end of the test run still arrives.
     /// </summary>
     /// <returns>
-    /// A name-to-value map for anything that takes environment variables: an Aspire resource, <c>Process.Start</c>,
+    /// Empty when the plugin is off (<see cref="IsEnabled"/> is false). Otherwise a name-to-value map for anything that takes environment variables: an Aspire resource, <c>Process.Start</c>,
     /// a container.
     /// </returns>
     IReadOnlyDictionary<string, string> GetExporterEnvironment();
 }
 
-internal sealed class TelemetryEndpoint(Uri endpoint) : ITelemetryEndpoint
+/// <param name="endpoint">The receiver's address; <c>null</c> when the plugin is off.</param>
+internal sealed class TelemetryEndpoint(Uri? endpoint) : ITelemetryEndpoint
 {
     // Exporter defaults are 5 s (spans) and 1 s (logs): the last scenarios' telemetry would miss the end of the run.
     private const string BatchDelayMilliseconds = "100";
 
-    public Uri Endpoint { get; } = endpoint;
+    public bool IsEnabled => endpoint is not null;
 
-    public IReadOnlyDictionary<string, string> GetExporterEnvironment() => new Dictionary<string, string>
+    public Uri Endpoint => endpoint ?? throw new InvalidOperationException(
+        "The telemetry receiver is not running: add an 'opentelemetry' entry to the Reqnroll formatters configuration.");
+
+    public IReadOnlyDictionary<string, string> GetExporterEnvironment() => !IsEnabled ? new Dictionary<string, string>() : new Dictionary<string, string>
     {
         ["OTEL_EXPORTER_OTLP_ENDPOINT"] = Endpoint.ToString().TrimEnd('/'),
         ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "http/protobuf",
