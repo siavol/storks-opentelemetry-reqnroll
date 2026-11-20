@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using Google.Protobuf;
 using Microsoft.AspNetCore.Builder;
@@ -18,6 +19,7 @@ namespace Storks.OpenTelemetry.Reqnroll.Receiver;
 /// </summary>
 internal sealed class OtlpReceiver : IAsyncDisposable
 {
+    private const string SourceName = "Storks.OpenTelemetry.Reqnroll.Receiver";
     private readonly TelemetryStore _store;
     private readonly Action<string, string>? _onError;
     private WebApplication? _app;
@@ -78,6 +80,11 @@ internal sealed class OtlpReceiver : IAsyncDisposable
         builder.WebHost.UseKestrelCore();
         builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Loopback, 0));
         builder.Services.AddRoutingCore();
+        // Hosting picks these up instead of its "Microsoft.AspNetCore" ones, so an In-process SUT's ASP.NET Core
+        // instrumentation never sees receiver requests, which would otherwise be exported back here in a loop.
+        builder.Services.AddSingleton(new DiagnosticListener(SourceName));
+        builder.Services.AddSingleton<DiagnosticSource>(sp => sp.GetRequiredService<DiagnosticListener>());
+        builder.Services.AddSingleton(new ActivitySource(SourceName));
         var app = builder.Build();
 
         app.MapPost("/v1/logs", ctx => Handle(ctx.Request, "/v1/logs", ExportLogsServiceRequest.Parser,
