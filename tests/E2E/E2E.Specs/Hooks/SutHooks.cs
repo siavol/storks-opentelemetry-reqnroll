@@ -51,10 +51,10 @@ public static class SutHooks
         foreach (var (key, value) in telemetry.GetExporterEnvironment().Concat(environment)) start.Environment[key] = value;
         var process = Process.Start(start) ?? throw new InvalidOperationException($"{name} did not start");
         Processes.Add(process);
-        await WaitUntilListening(name, url, process);
+        await WaitUntilListening(url, process);
     }
 
-    private static async Task WaitUntilListening(string name, Uri url, Process process)
+    private static async Task WaitUntilListening(Uri url, Process process)
     {
         using var client = new HttpClient { BaseAddress = url };
         var deadline = DateTimeOffset.UtcNow.AddMinutes(1);
