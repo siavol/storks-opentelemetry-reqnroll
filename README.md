@@ -62,7 +62,22 @@ builder.CreateResourceBuilder<ProjectResource>("orders-api")
     });
 ```
 
-While the formatter is switched off (step 3), `telemetry.IsEnabled` is false and the map is empty, so the hook stays the same either way.
+If your tests host the application in the test process (`WebApplicationFactory`), there are no environment variables to pass: add the plugin's exporter to the application's services instead. It adds export of traces and logs only, next to the exporters the application already has; instrumentation stays the application's own. See `samples/InProcess`.
+
+```csharp
+[BeforeTestRun]
+public static void StartSut(ITelemetryEndpoint telemetry)
+{
+    _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(web =>
+        web.ConfigureServices(services => services.AddOpenTelemetry().UseReqnrollExporter(telemetry)));
+}
+
+// Disposing the factory flushes the application's last telemetry into the report.
+[AfterTestRun]
+public static async Task StopSut() => await _factory!.DisposeAsync();
+```
+
+While the formatter is switched off (step 3), `telemetry.IsEnabled` is false: the map is empty and `UseReqnrollExporter` adds nothing, so the hook stays the same either way.
 
 **3. Switch the formatter on.** The plugin is a Reqnroll formatter named `opentelemetry`; without its entry in `formatters` it does nothing. Add a `reqnroll.json` to the test project:
 

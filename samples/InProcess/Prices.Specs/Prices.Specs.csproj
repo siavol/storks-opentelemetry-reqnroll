@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit3TestAdapter" />
+    <!-- The plugin depends on a Reqnroll range; run on the concrete ReqnrollVersion instead of its lower bound. -->
+    <PackageReference Include="Reqnroll" VersionOverride="$(ReqnrollVersion)" />
+    <PackageReference Include="Reqnroll.NUnit" />
+    <PackageReference Include="Storks.OpenTelemetry.Reqnroll" />
+    <ProjectReference Include="..\Prices.Api\Prices.Api.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="reqnroll.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
