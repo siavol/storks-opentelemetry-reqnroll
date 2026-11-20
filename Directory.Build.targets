@@ -1,6 +1,6 @@
 <Project>
   <!--
-    Samples and the E2E fixture reference the plugin like a user would: <PackageReference Include="Storks.OpenTelemetry.Reqnroll" />.
+    A project may reference the plugin like a user would: <PackageReference Include="Storks.OpenTelemetry.Reqnroll" />.
     This file decides what that reference resolves to.
 
     Default (project mode): the PackageReference is swapped for a ProjectReference to src/, so the plugin can be

@@ -119,7 +119,7 @@ jobs:
           dotnet restore Storks.OpenTelemetry.Reqnroll.slnx --locked-mode
           dotnet tool restore
 
-      # The samples, the E2E SUT and the E2E fixture are analysed but have no coverage: the E2E job runs them, the coverage is the package's unit tests.
+      # Coverage is the package's unit tests; code the E2E job runs is analysed without coverage.
       - name: Begin analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

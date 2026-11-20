@@ -16,24 +16,29 @@ public class ViewerTests
 
     private string _html = "";
 
+    private readonly record struct EmbeddedSpan(JsonNode Span, string Service)
+    {
+        public bool Is(string service, int kind) => Service == service && (int?)Span["kind"] == kind;
+    }
+
     [SetUp]
     public void LoadViewer() => _html = Reports.Viewer();
 
     /// <summary>Embedded spans by span id, with their service.</summary>
-    private Dictionary<string, (JsonNode Span, string Service)> Spans() =>
+    private Dictionary<string, EmbeddedSpan> Spans() =>
         Reports.DataBlock(_html, "otlp-traces").AsArray()
             .SelectMany(r => r!["resourceSpans"]!.AsArray())
             .SelectMany(rs => rs!["scopeSpans"]!.AsArray().SelectMany(ss => ss!["spans"]!.AsArray())
-                .Select(s => (Span: s!, Service: Reports.ServiceName(rs))))
+                .Select(s => new EmbeddedSpan(s!, Reports.ServiceName(rs))))
             .GroupBy(x => (string)x.Span["spanId"]!)
             .ToDictionary(g => g.Key, g => g.First());
 
     /// <summary>Embedded log record by its index id "request.resource.scope.record", with its service.</summary>
     private (JsonNode Log, string Service) Log(string id)
     {
-        var p = id.Split('.').Select(int.Parse).ToArray();
-        var resourceLogs = Reports.DataBlock(_html, "otlp-logs")[p[0]]!["resourceLogs"]![p[1]]!;
-        return (resourceLogs["scopeLogs"]![p[2]]!["logRecords"]![p[3]]!, Reports.ServiceName(resourceLogs));
+        var index = id.Split('.').Select(int.Parse).ToArray();
+        var resourceLogs = Reports.DataBlock(_html, "otlp-logs")[index[0]]!["resourceLogs"]![index[1]]!;
+        return (resourceLogs["scopeLogs"]![index[2]]!["logRecords"]![index[3]]!, Reports.ServiceName(resourceLogs));
     }
 
     private static string? Attribute(JsonNode span, string key)
@@ -51,7 +56,7 @@ public class ViewerTests
         return step;
     }
 
-    private List<(JsonNode Span, string Service)> StepSpans(JsonNode step)
+    private List<EmbeddedSpan> StepSpans(JsonNode step)
     {
         var spans = Spans();
         return step["spanIds"]!.AsArray().Select(id => spans[(string)id!]).ToList();
@@ -94,7 +99,7 @@ public class ViewerTests
         var back = stepSpans.Where(s => s.Service == "back-api" && Attribute(s.Span, "http.response.status_code") == "500").ToList();
         Assert.That(back, Has.Count.EqualTo(1), "no Back span with status code 500 attributed to the When step");
         var parent = (string?)back[0].Span["parentSpanId"];
-        Assert.That(stepSpans, Has.Some.Matches<(JsonNode Span, string Service)>(s => s.Service == "front-api" && (string?)s.Span["spanId"] == parent),
+        Assert.That(stepSpans, Has.Some.Matches<EmbeddedSpan>(s => s.Service == "front-api" && (string?)s.Span["spanId"] == parent),
             "the Back span is not under a Front span of the step");
     }
 
@@ -104,11 +109,11 @@ public class ViewerTests
         var step = WhenStep(Green);
         var stepSpans = StepSpans(step);
 
-        var get = stepSpans.Single(s => s.Service == "front-api" && (int?)s.Span["kind"] == Server);
-        var trace = stepSpans.Where(s => (string?)s.Span["traceId"] == (string?)get.Span["traceId"]).ToList();
-        Assert.That(trace, Has.Some.Matches<(JsonNode Span, string Service)>(s => s.Service == "front-api" && (int?)s.Span["kind"] == Client), "no Front client call");
-        Assert.That(trace, Has.Some.Matches<(JsonNode Span, string Service)>(s =>
-            s.Service == "back-api" && (int?)s.Span["kind"] == Server && Attribute(s.Span, "http.response.status_code") == "200"), "no Back server span with 200");
+        var frontRequest = stepSpans.Single(s => s.Is("front-api", Server));
+        var trace = stepSpans.Where(s => (string?)s.Span["traceId"] == (string?)frontRequest.Span["traceId"]).ToList();
+        Assert.That(trace, Has.Some.Matches<EmbeddedSpan>(s => s.Is("front-api", Client)), "no Front client call");
+        Assert.That(trace, Has.Some.Matches<EmbeddedSpan>(s =>
+            s.Is("back-api", Server) && Attribute(s.Span, "http.response.status_code") == "200"), "no Back server span with 200");
         Assert.That(step["logIds"]!.AsArray().Select(id => Log((string)id!).Service).Distinct(),
             Is.SupersetOf(new[] { "front-api", "back-api" }), "logs of both services in the When step");
     }
@@ -125,13 +130,13 @@ public class ViewerTests
     public void Startup_telemetry_is_Unattributed_in_the_BeforeTestRun_window_and_not_attributed_to_any_scenario()
     {
         var unattributed = Reports.DataBlock(_html, "run-index")["unattributed"]!;
-        var unLogs = unattributed["logIds"]!.AsArray().Select(x => (string)x!).ToList();
+        var unattributedLogs = unattributed["logIds"]!.AsArray().Select(x => (string)x!).ToList();
         var ofScenarios = Reports.Scenarios(_html).SelectMany(s => s["logIds"]!.AsArray()).Select(x => (string)x!).ToHashSet();
         const string Started = "Application started";
 
-        Assert.That(unLogs.Select(id => Body(Log(id).Log)), Has.Some.Contains(Started), "the SUT start is not Unattributed");
+        Assert.That(unattributedLogs.Select(id => Body(Log(id).Log)), Has.Some.Contains(Started), "the SUT start is not Unattributed");
         Assert.That(ofScenarios.Select(id => Body(Log(id).Log)), Has.None.Contains(Started), "the SUT start is attributed to a scenario");
-        Assert.That(unLogs.Intersect(ofScenarios), Is.Empty, "a log is both Unattributed and in a scenario");
+        Assert.That(unattributedLogs.Intersect(ofScenarios), Is.Empty, "a log is both Unattributed and in a scenario");
 
         var hooks = unattributed["hooks"]!.AsArray();
         Assert.That(hooks.Select(h => ((string?)h!["hookType"], (string?)h["name"])),
@@ -162,8 +167,8 @@ public class ViewerTests
             Assert.That(hooks.Select(h => ((string?)h!["hookType"], (string?)h["name"])),
                 Is.EqualTo(new[] { ("BeforeScenario", "SutHooks.EnsureFrontAnswers") }), $"{name}: only the test project's hook, none of the plugin");
             var hook = hooks.Single()!;
-            Assert.That(hook["spanIds"]!.AsArray().Select(id => spans[(string)id!]), Has.Some.Matches<(JsonNode Span, string Service)>(s =>
-                s.Service == "front-api" && (int?)s.Span["kind"] == Server && Attribute(s.Span, "http.response.status_code") == "404"),
+            Assert.That(hook["spanIds"]!.AsArray().Select(id => spans[(string)id!]), Has.Some.Matches<EmbeddedSpan>(s =>
+                s.Is("front-api", Server) && Attribute(s.Span, "http.response.status_code") == "404"),
                 $"{name}: the readiness request is not in the hook window");
             Assert.That(Nanos(hook["endUnixNano"]), Is.LessThan(Nanos(scenario["steps"]![0]!["startUnixNano"])), $"{name}: the hook window overlaps the first step");
         }

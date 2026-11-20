@@ -27,9 +27,9 @@ internal static class Reports
     /// <summary>A JSON data block embedded into telemetry.html.</summary>
     public static JsonNode DataBlock(string html, string id)
     {
-        var m = Regex.Match(html, $"<script type=\"application/json\" id=\"{id}\">(.*?)</script>", RegexOptions.Singleline);
-        Assert.That(m.Success, $"telemetry.html has no data block {id}");
-        return JsonNode.Parse(m.Groups[1].Value)!;
+        var block = Regex.Match(html, $"<script type=\"application/json\" id=\"{id}\">(.*?)</script>", RegexOptions.Singleline);
+        Assert.That(block.Success, $"telemetry.html has no data block {id}");
+        return JsonNode.Parse(block.Groups[1].Value)!;
     }
 
     public static IEnumerable<JsonNode> Scenarios(string html) =>
