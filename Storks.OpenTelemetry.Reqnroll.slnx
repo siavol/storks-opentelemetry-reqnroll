@@ -17,8 +17,6 @@
     <Project Path="samples/Aspire/Orders.Api/Orders.Api.csproj" />
     <Project Path="samples/Aspire/Pricing.Api/Pricing.Api.csproj" />
     <Project Path="samples/Aspire/ServiceDefaults/ServiceDefaults.csproj" />
-    <Project Path="samples/Aspire/App.Sut.Tests/App.Sut.Tests.csproj" />
     <Project Path="samples/Aspire/App.Specs/App.Specs.csproj" />
-    <Project Path="samples/Aspire/App.Specs.ReportChecks/App.Specs.ReportChecks.csproj" />
   </Folder>
 </Solution>

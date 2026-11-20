@@ -1,6 +1,6 @@
 # Reusable E2E: called by ci.yml and release.yml after build.yml.
-# Runs the E2E fixture (tests/E2E) and the Aspire sample on the packed nupkg (UseLocalPackage=true), exactly as a
-# user's project consumes it, then the report checks. Ubuntu only: the sample needs Docker (Postgres container).
+# Runs the E2E fixture (tests/E2E) and its report checks on the packed nupkg (UseLocalPackage=true), exactly as a
+# user's project consumes it, then the Aspire sample as a smoke test. Ubuntu only: the sample needs Docker (Postgres container).
 name: E2E
 
 on:
@@ -67,13 +67,13 @@ jobs:
           echo "dotnet test exited with $? (non-zero is expected: @demo-failure fails by design; checked next)"
 
       # The @demo-failure scenario in samples/Aspire/App.Specs/Features/Checkout.feature fails on purpose, so the
-      # report shows a red scenario. It is kept in the run because the report checks assert that red scenario.
-      # Here: that exact scenario failed and every other test passed. Update the name here if that scenario is renamed.
+      # report shows a red scenario. Here: that exact scenario failed and every other test passed.
+      # Update the name here if that scenario is renamed.
       - name: Check that only @demo-failure is red
         run: python3 -I .github/scripts/only-expected-red.py artifacts/test-results/app-specs.trx CustomerPlacesAnOrderForASKUWhosePriceCannotBeFetched
 
-      - name: Report checks
-        run: dotnet test samples/Aspire/App.Specs.ReportChecks
+      - name: Check that the sample wrote telemetry.html
+        run: test -s samples/Aspire/App.Specs/bin/Debug/net11.0/reports/telemetry.html
 
       - name: Upload reports
         if: always()
