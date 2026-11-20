@@ -130,7 +130,7 @@ jobs:
           /d:sonar.host.url=https://sonarcloud.io
           "/d:sonar.token=$SONAR_TOKEN"
           "/d:sonar.cs.vscoveragexml.reportsPaths=artifacts/coverage/**/*.xml"
-          "/d:sonar.coverage.exclusions=samples/**,tests/E2E/Back.Api/**,tests/E2E/Front.Api/**,tests/E2E/E2E.Specs/**"
+          "/d:sonar.coverage.exclusions=samples/**,.github/scripts/**,tests/E2E/Back.Api/**,tests/E2E/Front.Api/**,tests/E2E/E2E.Specs/**"
 
       - name: Build
         run: dotnet build Storks.OpenTelemetry.Reqnroll.slnx --no-restore

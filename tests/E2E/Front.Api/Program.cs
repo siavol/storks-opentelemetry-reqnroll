@@ -1,3 +1,4 @@
+using Front.Api;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -27,12 +28,3 @@ app.MapGet("/quotes/{sku}", async (string sku, IHttpClientFactory clients, ILogg
 });
 
 await app.RunAsync();
-
-internal static partial class Log
-{
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Price request to back-api failed for SKU {Sku} with {StatusCode}, quoting 0")]
-    public static partial void BackFailed(ILogger logger, string sku, int statusCode);
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Quoted SKU {Sku} at {Price}")]
-    public static partial void Quoted(ILogger logger, string sku, decimal price);
-}
