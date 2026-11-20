@@ -3,3 +3,5 @@ Storks.OpenTelemetry.Reqnroll.ITelemetryEndpoint
 Storks.OpenTelemetry.Reqnroll.ITelemetryEndpoint.Endpoint.get -> System.Uri!
 Storks.OpenTelemetry.Reqnroll.ITelemetryEndpoint.GetExporterEnvironment() -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
 Storks.OpenTelemetry.Reqnroll.ITelemetryEndpoint.IsEnabled.get -> bool
+Storks.OpenTelemetry.Reqnroll.ReqnrollExporterExtensions
+static Storks.OpenTelemetry.Reqnroll.ReqnrollExporterExtensions.UseReqnrollExporter(this OpenTelemetry.IOpenTelemetryBuilder! builder, Storks.OpenTelemetry.Reqnroll.ITelemetryEndpoint! telemetry) -> OpenTelemetry.IOpenTelemetryBuilder!

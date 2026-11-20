@@ -41,6 +41,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Reqnroll" />
     <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <EmbeddedResource Include="Viewer/telemetry.viewer.html" LogicalName="Storks.OpenTelemetry.Reqnroll.Viewer.telemetry.viewer.html" />
     <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
     <PackageReference Include="MinVer" PrivateAssets="all" />
