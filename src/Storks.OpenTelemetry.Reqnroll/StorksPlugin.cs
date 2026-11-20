@@ -1,6 +1,5 @@
 using System.Reflection;
 using Reqnroll.BoDi;
-using Reqnroll.Events;
 using Reqnroll.Formatters;
 using Reqnroll.Formatters.Configuration;
 using Reqnroll.Plugins;
@@ -22,15 +21,6 @@ internal sealed class StorksPlugin : IRuntimePlugin
     {
         runtimePluginEvents.CustomizeGlobalDependencies += (_, args) =>
             RegisterGlobalDependencies(args.ObjectContainer);
-
-        // Records the run and feature hook windows; everything else comes from the Cucumber Messages.
-        runtimePluginEvents.CustomizeTestThreadDependencies += (_, args) =>
-        {
-            var container = args.ObjectContainer;
-            if (!container.Resolve<ITelemetryEndpoint>().IsEnabled) return;
-            container.Resolve<ITestThreadExecutionEventPublisher>()
-                .AddListener(new RunEventListener(container.Resolve<RunTracker>(), container.Resolve<PluginDiagnostics>()));
-        };
     }
 
     /// <summary>
@@ -58,7 +48,7 @@ internal sealed class StorksPlugin : IRuntimePlugin
         container.RegisterInstanceAs(receiver);
         container.RegisterInstanceAs(diagnostics);
         container.RegisterInstanceAs(record);
-        container.RegisterInstanceAs(new RunTracker(record, diagnostics));
+        container.RegisterInstanceAs(new RunTracker(diagnostics));
         container.RegisterInstanceAs(RunOutput.ProcessStreams());
         container.RegisterInstanceAs<ITelemetryEndpoint>(new TelemetryEndpoint(receiver.Endpoint));
         container.RegisterInstanceAs(ReportFiles.From(formatters.GetFormatterConfigurationByName(TelemetryFormatter.FormatterName),

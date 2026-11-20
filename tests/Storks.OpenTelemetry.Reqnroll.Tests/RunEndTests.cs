@@ -92,7 +92,7 @@ public class RunEndTests
         {
             var dir = Path.Combine(Path.GetTempPath(), "storks-otel-tests", Guid.NewGuid().ToString("N"));
             Files = new ReportFiles(Path.Combine(dir, "v", "run.html"), Path.Combine(dir, "t", "traces.jsonl"), Path.Combine(dir, "logs.jsonl"));
-            Tracker = new RunTracker(Record, Diagnostics);
+            Tracker = new RunTracker(Diagnostics);
         }
 
         public async Task Finish()
