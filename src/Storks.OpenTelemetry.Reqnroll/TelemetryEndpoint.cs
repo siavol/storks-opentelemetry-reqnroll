@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Storks.OpenTelemetry.Reqnroll;
 
 /// <summary>
@@ -32,9 +34,6 @@ public interface ITelemetryEndpoint
 /// <param name="endpoint">The receiver's address; <c>null</c> when the plugin is off.</param>
 internal sealed class TelemetryEndpoint(Uri? endpoint) : ITelemetryEndpoint
 {
-    private static readonly string BatchDelay =
-        ReqnrollExporterExtensions.BatchDelayMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
-
     public bool IsEnabled => endpoint is not null;
 
     public Uri Endpoint => endpoint ?? throw new InvalidOperationException(
@@ -44,7 +43,7 @@ internal sealed class TelemetryEndpoint(Uri? endpoint) : ITelemetryEndpoint
     {
         ["OTEL_EXPORTER_OTLP_ENDPOINT"] = Endpoint.ToString().TrimEnd('/'),
         ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "http/protobuf",
-        ["OTEL_BSP_SCHEDULE_DELAY"] = BatchDelay,
-        ["OTEL_BLRP_SCHEDULE_DELAY"] = BatchDelay,
+        ["OTEL_BSP_SCHEDULE_DELAY"] = ReqnrollExporterExtensions.BatchDelayMilliseconds.ToString(CultureInfo.InvariantCulture),
+        ["OTEL_BLRP_SCHEDULE_DELAY"] = ReqnrollExporterExtensions.BatchDelayMilliseconds.ToString(CultureInfo.InvariantCulture),
     };
 }

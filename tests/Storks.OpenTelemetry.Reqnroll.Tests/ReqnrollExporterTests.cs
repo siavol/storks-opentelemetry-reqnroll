@@ -57,13 +57,11 @@ public class ReqnrollExporterTests
         sutExporters(otel);
         otel.UseReqnrollExporter(telemetry);
 
-        using (var provider = services.BuildServiceProvider())
-        {
-            provider.GetRequiredService<TracerProvider>(); // the tracer provider is built lazily, on first resolve
-            var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("InProcess.Sut.Orders");
-            using var source = new ActivitySource(Source);
-            using (source.StartActivity("GET /orders")) OrderPlaced(logger, null);
-        }
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<TracerProvider>(); // the tracer provider is built lazily, on first resolve
+        var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("InProcess.Sut.Orders");
+        using var source = new ActivitySource(Source);
+        using (source.StartActivity("GET /orders")) OrderPlaced(logger, null);
     }
 
     private static void AssertArrived(TelemetryStore store)
