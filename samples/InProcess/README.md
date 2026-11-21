@@ -3,7 +3,7 @@
 Reqnroll scenarios against an API hosted in the test process with `WebApplicationFactory`, with the plugin enabled. No Docker needed.
 
 Projects:
-- `Prices.Api`: returns SKU prices; its `Program` sets up OpenTelemetry the way a real app does.
+- `Prices.Api`: prices a basket (catalog lookup and bulk discount per line, each in its own span); its `Program` sets up OpenTelemetry the way a real app does.
 - `Prices.Specs`: the Reqnroll tests with the plugin. `Hooks/SutHooks.cs` starts the API with `UseReqnrollExporter` in `[BeforeTestRun]` and disposes it in `[AfterTestRun]`.
 
 ## Run
