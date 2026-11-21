@@ -19,9 +19,12 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
-  <!-- Reproducible restore: every project has a packages.lock.json; CI restores in locked mode. -->
+  <!--
+    Reproducible restore: every project outside samples/ has a packages.lock.json; CI restores in locked mode.
+    The samples have none: users copy them, and their smoke runs on the nupkg restore unlocked anyway.
+  -->
   <PropertyGroup>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestorePackagesWithLockFile Condition="!$([MSBuild]::MakeRelative($(MSBuildThisFileDirectory), $(MSBuildProjectDirectory)).StartsWith('samples'))">true</RestorePackagesWithLockFile>
     <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
   </PropertyGroup>
 </Project>
