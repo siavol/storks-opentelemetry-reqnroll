@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/siavol/storks-opentelemetry-reqnroll/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/siavol/storks-opentelemetry-reqnroll/actions/workflows/ci.yml?query=branch%3Amain)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=siavol_storks-opentelemetry-reqnroll&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=siavol_storks-opentelemetry-reqnroll)
+[![NuGet](https://img.shields.io/nuget/vpre/Storks.OpenTelemetry.Reqnroll)](https://www.nuget.org/packages/Storks.OpenTelemetry.Reqnroll)
 
 A Reqnroll formatter that receives your application's OpenTelemetry traces and logs during `dotnet test` and shows them by scenario and step in a Telemetry Viewer.
 
