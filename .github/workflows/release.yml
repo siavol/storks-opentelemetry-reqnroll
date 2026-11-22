@@ -1,15 +1,19 @@
-# Release on a pushed tag vX.Y.Z (or a prerelease tag such as v0.1.0-rc.1). Jobs:
+# A release is published in the GitHub UI (or `gh release create ... --target main`) on a new tag vX.Y.Z or
+# vX.Y.Z-pre on main; this workflow checks it, publishes it to nuget.org and attaches the nupkg to it. Jobs:
 #   build           build.yml without the NuGet cache; MinVer takes the version from the tag
-#   version         the tagged commit is on main and the packed version equals the tag, otherwise nothing is published
+#   version         the tagged commit is on main, the packed version equals the tag and the release's pre-release
+#                   flag matches the tag's suffix, otherwise nothing is published
 #   e2e             e2e.yml on the packed nupkg
 #   publish         environment `nuget` (tags v* only, waits for a maintainer's approval): Trusted Publishing login,
 #                   then push of exactly the nupkg and snupkg that passed E2E; nothing is rebuilt
-#   github-release  GitHub Release with generated release notes and the nupkg attached
+#   github-release  the nupkg attached to the release; its title, notes and flags are left as they are
 name: Release
 
+# Only `published`: a tag created with the release also fires `push`, which would start a second run, and turning a
+# pre-release into a release fires `released`, not `published`.
 on:
-  push:
-    tags: ["v*"]
+  release:
+    types: [published]
 
 permissions: {}
 
@@ -38,7 +42,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: read # checkout of main for the ancestry check
+      contents: read # checkout of main for the ancestry check, gh release view
     outputs:
       version: ${{ steps.check.outputs.version }}
     steps:
@@ -83,9 +87,25 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      # Otherwise an alpha would become the stable "Latest" release on GitHub, or a stable version would be marked
+      # Pre-release. The flag is read from the release, not the event, so a re-run sees a corrected checkbox.
+      - name: Check the pre-release flag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          prerelease="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)"
+          tag_is_prerelease=false
+          if [[ "$VERSION" == *-* ]]; then tag_is_prerelease=true; fi
+          if [ "$tag_is_prerelease" != "$prerelease" ]; then
+            echo "::error::The tag $TAG is a pre-release: $tag_is_prerelease, but the release's pre-release flag is $prerelease; correct the flag and re-run"
+            exit 1
+          fi
+
   e2e:
     name: E2E
-    needs: build
+    needs: [build, version]
     permissions:
       contents: read
     uses: ./.github/workflows/e2e.yml
@@ -131,7 +151,7 @@ jobs:
     needs: [build, version, publish]
     runs-on: ubuntu-latest
     permissions:
-      contents: write # gh release create
+      contents: write # gh release upload
     steps:
       - name: Download packages
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -139,13 +159,11 @@ jobs:
           name: ${{ needs.build.outputs.package-artifact }}
           path: packages
 
-      - name: Create the release
+      - name: Attach the nupkg to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           VERSION: ${{ needs.version.outputs.version }}
-        run: |
-          prerelease=()
-          if [[ "$VERSION" == *-* ]]; then prerelease=(--prerelease); fi
-          gh release create "$TAG" "packages/Storks.OpenTelemetry.Reqnroll.$VERSION.nupkg" \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$TAG" "${prerelease[@]}"
+        run: >
+          gh release upload "$TAG" "packages/Storks.OpenTelemetry.Reqnroll.$VERSION.nupkg"
+          --repo "$GITHUB_REPOSITORY"
